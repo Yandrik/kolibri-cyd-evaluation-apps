@@ -2,7 +2,7 @@
 #![no_main]
 
 use core::cell::RefCell;
-
+use core::cmp::min;
 use display_interface_spi::SPIInterface;
 use embassy_embedded_hal::shared_bus::blocking::spi::SpiDevice;
 use embassy_executor::Spawner;
@@ -11,9 +11,12 @@ use embassy_sync::{
     signal::Signal,
 };
 use embassy_time::{Duration, Timer};
-use embedded_graphics::{mono_font::ascii, prelude::Point};
-use embedded_graphics::pixelcolor::Rgb565;
-use embedded_graphics::prelude::RgbColor;
+use embedded_graphics::{
+    mono_font::ascii,
+    pixelcolor::Rgb565,
+    prelude::{DrawTarget, Point, RgbColor},
+};
+use embedded_graphics_profiler_display::ProfilerDisplay;
 use esp_backtrace as _;
 use esp_hal::{
     clock::ClockControl,
@@ -28,8 +31,14 @@ use esp_hal::{
 };
 use esp_println::println;
 use kolibri_cyd_tester_app_embassy::Debouncer;
-use kolibri_embedded_gui::{button::Button, label::Label, style::medsize_rgb565_style, ui::Ui};
-use kolibri_embedded_gui::ui::Interaction;
+use kolibri_embedded_gui::{
+    button::Button,
+    label::Label,
+    smartstate::SmartstateProvider,
+    style::medsize_rgb565_style,
+    ui::{Interaction, Ui},
+};
+use kolibri_embedded_gui::helpers::keyboard::draw_keyboard;
 use mipidsi::{
     models::{ILI9486Rgb565, ILI9486Rgb666},
     options::{ColorInversion, ColorOrder, Orientation, Rotation},
@@ -50,7 +59,7 @@ async fn touch_task(
         Input::new(touch_irq, Pull::Up),
         xpt2046::Orientation::LandscapeFlipped,
     );
-    touch_driver.set_num_samples(32);
+    touch_driver.set_num_samples(16);
     touch_driver.init(&mut embassy_time::Delay).unwrap();
 
     let mut debounce = Debouncer::new();
@@ -60,7 +69,7 @@ async fn touch_task(
         touch_driver.run().expect("Running Touch driver failed");
         if touch_driver.is_touched() {
             let point = touch_driver.get_touch_point();
-            touch_signal.signal(Some(Point::new(point.x, 240-point.y)));
+            touch_signal.signal(Some(Point::new(point.x + 25, 240 - point.y)));
         } else {
             touch_signal.signal(None);
         }
@@ -117,7 +126,7 @@ async fn main(spawner: Spawner) {
         SpiDevice::new(spi_bus, Output::new(cs, Level::Low)),
         Output::new(dc, Level::Low),
     );
-    let mut display = Builder::new(ILI9486Rgb565, di)
+    let display = Builder::new(ILI9486Rgb565, di)
         .orientation(Orientation {
             rotation: Rotation::Deg90,
             mirrored: true,
@@ -126,6 +135,8 @@ async fn main(spawner: Spawner) {
         .invert_colors(ColorInversion::Inverted)
         .init(&mut embassy_time::Delay)
         .unwrap();
+
+    let mut display = ProfilerDisplay::new(display);
 
     {
         let mut ui = Ui::new_fullscreen(&mut display, medsize_rgb565_style());
@@ -140,8 +151,13 @@ async fn main(spawner: Spawner) {
     let touch_clk = io.pins.gpio25;
     let touch_cs = io.pins.gpio33;
 
-    let mut touch_spi = Spi::new(peripherals.SPI3, 10.MHz(), SpiMode::Mode0, &mut clocks)
-        .with_pins(Some(touch_clk), Some(touch_mosi), Some(touch_miso), NO_PIN);
+    // 2MHz is the MAX! DO NOT DECREASE! This is really important.
+    let mut touch_spi = Spi::new(peripherals.SPI3, 2.MHz(), SpiMode::Mode0, &mut clocks).with_pins(
+        Some(touch_clk),
+        Some(touch_mosi),
+        Some(touch_miso),
+        NO_PIN,
+    );
     static TOUCH_SPI_BUS: StaticCell<NoopMutex<RefCell<Spi<SPI3, FullDuplexMode>>>> =
         StaticCell::new();
     let touch_spi_bus = NoopMutex::new(RefCell::new(touch_spi));
@@ -152,12 +168,7 @@ async fn main(spawner: Spawner) {
     let touch_signal = &*TOUCH_SIGNAL.init(touch_signal);
 
     spawner
-        .spawn(touch_task(
-            touch_irq,
-            touch_spi_bus,
-            touch_cs,
-            touch_signal,
-        ))
+        .spawn(touch_task(touch_irq, touch_spi_bus, touch_cs, touch_signal))
         .unwrap();
 
     // init RGB LED pins
@@ -166,16 +177,25 @@ async fn main(spawner: Spawner) {
     let mut green_led = Output::new(io.pins.gpio16, Level::High);
     let mut blue_led = Output::new(io.pins.gpio17, Level::High);
 
+    // init SD card pins
+    let sd_miso = io.pins.gpio19;
+    let sd_mosi = io.pins.gpio23;
+    let sd_sck = io.pins.gpio18;
+    let sd_cs = io.pins.gpio5;
+
     // TODO: Spawn some tasks
     let _ = spawner;
 
     let mut last_touch = None;
 
-    static BUF_CELL: StaticCell<[Rgb565; 100*100]> = StaticCell::new();
+    static BUF_CELL: StaticCell<[Rgb565; 100 * 100]> = StaticCell::new();
     let buf = BUF_CELL.init([Rgb565::BLACK; 100 * 100]);
 
     // Periodically feed the RWDT watchdog timer when our tasks are not running:
+    let mut sm = SmartstateProvider::<20>::new();
     loop {
+        let start_time = embassy_time::Instant::now();
+        sm.restart_counter();
         let mut ui = Ui::new_fullscreen(&mut display, medsize_rgb565_style());
         ui.set_buffer(buf);
         if let Some(touch) = touch_signal.try_take() {
@@ -186,19 +206,38 @@ async fn main(spawner: Spawner) {
                 (None, None) => Interaction::None,
             };
             ui.interact(interact);
-            println!("{:?}, {:?}, {:?}", last_touch, touch, interact);
-
+            // println!("{:?}, {:?}, {:?}", last_touch, touch, interact);
+            
             last_touch = touch;
         }
+        let start_draw_time = embassy_time::Instant::now();
         ui.sub_ui(|ui| {
             ui.style_mut().default_font = ascii::FONT_9X18_BOLD;
-            ui.add(Label::new("Kolibri Tester"));
+            ui.add(Label::new("Kolibri Tester").smartstate(sm.next()));
             Ok(())
         })
-            .ok();
-        ui.add_horizontal(Button::new("Works!"));
-        ui.add(Button::new("And pretty nicely!"));
+        .ok();
+        ui.add_horizontal(Button::new("Works!").smartstate(sm.next()));
+        ui.add(Button::new("And pretty nicely!").smartstate(sm.next()));
         rtc.rwdt.feed();
+        let draw_time = display.get_time();
+        let prep_time = start_draw_time - start_time;
+        let proc_time = embassy_time::Instant::now() - start_draw_time;
+        let proc_time = proc_time - min(draw_time, proc_time);
+
+        if draw_time.as_micros() > 0 {
+            println!(
+                "draw time: {}.{:03}ms | prep time: {}.{:03}ms | proc time: {}.{:03}ms ",
+                draw_time.as_millis(),
+                draw_time.as_micros() % 100,
+                prep_time.as_millis(),
+                prep_time.as_micros() % 100,
+                proc_time.as_millis(),
+                proc_time.as_micros() % 100,
+            );
+
+        }
+        display.reset_time();
         Timer::after(Duration::from_millis(17)).await; // 60 a second
     }
 }
