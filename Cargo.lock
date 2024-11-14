@@ -726,6 +726,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
+name = "format_no_std"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ae45e32b0bfe2c62c805f8e87027b5aa08562000326edbc5b421ab6d92873a7"
+
+[[package]]
 name = "fugit"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -861,17 +867,20 @@ dependencies = [
  "esp-hal",
  "esp-hal-embassy",
  "esp-println",
+ "format_no_std",
  "heapless 0.8.0",
  "kolibri-embedded-gui",
  "mipidsi",
+ "profont",
  "static_cell",
+ "ufmt",
  "xpt2046",
 ]
 
 [[package]]
 name = "kolibri-embedded-gui"
 version = "0.0.0-alpha.1"
-source = "git+https://github.com/Yandrik/kolibri.git?branch=optimizations#1bd7d733a6772f208a8a08f05cf33f5467c02d34"
+source = "git+https://github.com/Yandrik/kolibri.git?branch=optimizations#f3e92212ac29431561748e6c37427651b3151bc4"
 dependencies = [
  "embedded-graphics",
  "embedded-iconoir",
@@ -1037,6 +1046,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e719e8df665df0d1c8fbfd238015744736151d4445ec0836b8e628aae103b77"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "profont"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "016681370a9dd6e7ddb4c1a959922fd59dc45e5ebaa5ff5b13090267898ced34"
+dependencies = [
+ "embedded-graphics",
 ]
 
 [[package]]
@@ -1264,6 +1282,27 @@ dependencies = [
  "serde_spanned",
  "toml_datetime",
  "winnow",
+]
+
+[[package]]
+name = "ufmt"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a64846ec02b57e9108d6469d98d1648782ad6bb150a95a9baac26900bbeab9d"
+dependencies = [
+ "ufmt-macros",
+ "ufmt-write",
+]
+
+[[package]]
+name = "ufmt-macros"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d337d3be617449165cb4633c8dece429afd83f84051024079f97ad32a9663716"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
