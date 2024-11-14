@@ -10,12 +10,9 @@ use embassy_sync::{
     blocking_mutex::{raw::NoopRawMutex, NoopMutex},
     signal::Signal,
 };
-use embassy_time::{Duration, Timer};
-use embedded_graphics::{
-    mono_font::ascii,
-    pixelcolor::Rgb565,
-    prelude::{DrawTarget, Point, RgbColor},
-};
+use embassy_time::{Duration, Instant, Timer};
+use embedded_graphics::{mono_font::ascii, pixelcolor::Rgb565, prelude::{DrawTarget, Point, RgbColor}, Drawable};
+use embedded_graphics::prelude::Size;
 use embedded_graphics_profiler_display::ProfilerDisplay;
 use esp_backtrace as _;
 use esp_hal::{
@@ -31,19 +28,11 @@ use esp_hal::{
 };
 use esp_println::println;
 use kolibri_cyd_tester_app_embassy::Debouncer;
-use kolibri_embedded_gui::{
-    button::Button,
-    label::Label,
-    smartstate::SmartstateProvider,
-    style::medsize_rgb565_style,
-    ui::{Interaction, Ui},
-};
+use kolibri_embedded_gui::{button::Button, icons, label::Label, smartstate::SmartstateProvider, style::medsize_rgb565_style, ui::{Interaction, Ui}};
 use kolibri_embedded_gui::helpers::keyboard::draw_keyboard;
-use mipidsi::{
-    models::{ILI9486Rgb565, ILI9486Rgb666},
-    options::{ColorInversion, ColorOrder, Orientation, Rotation},
-    Builder,
-};
+use kolibri_embedded_gui::iconbutton::IconButton;
+use kolibri_embedded_gui::spacer::Spacer;
+use mipidsi::{models::{ILI9486Rgb565, ILI9486Rgb666}, options::{ColorInversion, ColorOrder, Orientation, Rotation}, Builder, Display, NoResetPin};
 use static_cell::{make_static, StaticCell};
 use xpt2046::Xpt2046;
 
@@ -193,6 +182,11 @@ async fn main(spawner: Spawner) {
 
     // Periodically feed the RWDT watchdog timer when our tasks are not running:
     let mut sm = SmartstateProvider::<20>::new();
+    let mut ui_data = UiData {
+       timer_started: false,
+       timer_duration: Duration::from_secs(30),
+       timer_start_time: Instant::now(),
+    };
     loop {
         let start_time = embassy_time::Instant::now();
         sm.restart_counter();
@@ -207,18 +201,11 @@ async fn main(spawner: Spawner) {
             };
             ui.interact(interact);
             // println!("{:?}, {:?}, {:?}", last_touch, touch, interact);
-            
+
             last_touch = touch;
         }
         let start_draw_time = embassy_time::Instant::now();
-        ui.sub_ui(|ui| {
-            ui.style_mut().default_font = ascii::FONT_9X18_BOLD;
-            ui.add(Label::new("Kolibri Tester").smartstate(sm.next()));
-            Ok(())
-        })
-        .ok();
-        ui.add_horizontal(Button::new("Works!").smartstate(sm.next()));
-        ui.add(Button::new("And pretty nicely!").smartstate(sm.next()));
+        do_ui(&mut sm, &mut ui, &mut ui_data);
         let end_time = embassy_time::Instant::now();
         let draw_time = display.get_time();
         let prep_time = start_draw_time - start_time;
@@ -241,4 +228,23 @@ async fn main(spawner: Spawner) {
         display.reset_time();
         Timer::after(Duration::from_millis(17)).await; // 60 a second
     }
+}
+
+struct UiData {
+    timer_started: bool,
+    timer_duration: Duration,
+    timer_start_time: Instant,
+}
+
+fn do_ui<DISP: DrawTarget<Color=Rgb565>>(sm: &mut SmartstateProvider<20>, ui: &mut Ui<DISP, Rgb565>, &mut UiData) {
+    ui.sub_ui(|ui| {
+        ui.style_mut().default_font = ascii::FONT_9X18_BOLD;
+        ui.add(Label::new("Timer").smartstate(sm.next()));
+        Ok(())
+    })
+        .ok();
+    ui.add(Spacer::new(Size::new(0, 16)));
+    ui.add(Spacer::new(Size::new(0, 32)));
+    ui.add_horizontal(IconButton::new(icons::size32px::music::Play).smartstate(sm.next()));
+    ui.add(Button::new("And pretty nicely!").smartstate(sm.next()));
 }
