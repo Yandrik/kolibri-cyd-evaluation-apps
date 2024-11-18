@@ -3,6 +3,9 @@ name = "embedded-graphics-profiler-display"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+std = []
+
 [dependencies]
 atomic = "0.6.0"
 embassy-time = "0.3.2"

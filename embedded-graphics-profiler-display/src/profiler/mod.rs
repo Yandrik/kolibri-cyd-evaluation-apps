@@ -1,4 +1,7 @@
 use atomic::Atomic;
+#[cfg(feature = "std")]
+use std::time::{Duration, Instant};
+#[cfg(not(feature = "std"))]
 use embassy_time::{Duration, Instant};
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::{Drawable, Pixel};
