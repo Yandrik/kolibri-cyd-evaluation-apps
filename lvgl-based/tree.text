@@ -1,0 +1,322 @@
+rust-m5stack-lvgl-demo v0.1.0 (/home/yannik/repos/kolibri-cyd-tester-app-embassy/lvgl-based)
+├── cstr_core v0.2.6
+│   ├── cty v0.2.2
+│   └── memchr v2.7.4
+├── display-interface-spi v0.5.0
+│   ├── byte-slice-cast v1.2.2
+│   ├── display-interface v0.5.0
+│   ├── embedded-hal v1.0.0
+│   └── embedded-hal-async v1.0.0
+│       └── embedded-hal v1.0.0
+├── embedded-graphics-core v0.4.0
+│   ├── az v1.2.1
+│   └── byteorder v1.5.0
+├── esp-idf-hal v0.44.1
+│   ├── atomic-waker v1.1.2
+│   ├── critical-section v1.2.0
+│   ├── embassy-sync v0.6.0
+│   │   ├── cfg-if v1.0.0
+│   │   ├── critical-section v1.2.0
+│   │   ├── embedded-io-async v0.6.1
+│   │   │   └── embedded-io v0.6.1
+│   │   ├── futures-util v0.3.31
+│   │   │   ├── futures-core v0.3.31
+│   │   │   ├── futures-task v0.3.31
+│   │   │   ├── pin-project-lite v0.2.15
+│   │   │   └── pin-utils v0.1.0
+│   │   └── heapless v0.8.0
+│   │       ├── hash32 v0.3.1
+│   │       │   └── byteorder v1.5.0
+│   │       └── stable_deref_trait v1.2.0
+│   ├── embedded-can v0.4.1
+│   │   └── nb v1.1.0
+│   ├── embedded-hal v0.2.7
+│   │   ├── nb v0.1.3
+│   │   │   └── nb v1.1.0
+│   │   └── void v1.0.2
+│   ├── embedded-hal v1.0.0
+│   ├── embedded-hal-async v1.0.0 (*)
+│   ├── embedded-hal-nb v1.0.0
+│   │   ├── embedded-hal v1.0.0
+│   │   └── nb v1.1.0
+│   ├── embedded-io v0.6.1
+│   ├── embedded-io-async v0.6.1 (*)
+│   ├── enumset v1.1.5
+│   │   └── enumset_derive v0.10.0 (proc-macro)
+│   │       ├── darling v0.20.10
+│   │       │   ├── darling_core v0.20.10
+│   │       │   │   ├── fnv v1.0.7
+│   │       │   │   ├── ident_case v1.0.1
+│   │       │   │   ├── proc-macro2 v1.0.89
+│   │       │   │   │   └── unicode-ident v1.0.13
+│   │       │   │   ├── quote v1.0.37
+│   │       │   │   │   └── proc-macro2 v1.0.89 (*)
+│   │       │   │   └── syn v2.0.87
+│   │       │   │       ├── proc-macro2 v1.0.89 (*)
+│   │       │   │       ├── quote v1.0.37 (*)
+│   │       │   │       └── unicode-ident v1.0.13
+│   │       │   └── darling_macro v0.20.10 (proc-macro)
+│   │       │       ├── darling_core v0.20.10 (*)
+│   │       │       ├── quote v1.0.37 (*)
+│   │       │       └── syn v2.0.87 (*)
+│   │       ├── proc-macro2 v1.0.89 (*)
+│   │       ├── quote v1.0.37 (*)
+│   │       └── syn v2.0.87 (*)
+│   ├── esp-idf-sys v0.35.0
+│   │   ├── build-time v0.1.3 (proc-macro)
+│   │   │   ├── chrono v0.4.38
+│   │   │   │   ├── iana-time-zone v0.1.61
+│   │   │   │   └── num-traits v0.2.19
+│   │   │   │       [build-dependencies]
+│   │   │   │       └── autocfg v1.4.0
+│   │   │   ├── once_cell v1.20.2
+│   │   │   ├── proc-macro2 v1.0.89 (*)
+│   │   │   ├── quote v1.0.37 (*)
+│   │   │   └── syn v2.0.87 (*)
+│   │   ├── const_format v0.2.33
+│   │   │   └── const_format_proc_macros v0.2.33 (proc-macro)
+│   │   │       ├── proc-macro2 v1.0.89 (*)
+│   │   │       ├── quote v1.0.37 (*)
+│   │   │       └── unicode-xid v0.2.6
+│   │   └── libc v0.2.162
+│   │   [build-dependencies]
+│   │   ├── anyhow v1.0.93
+│   │   ├── bindgen v0.69.5
+│   │   │   ├── bitflags v2.6.0
+│   │   │   ├── cexpr v0.6.0
+│   │   │   │   └── nom v7.1.3
+│   │   │   │       ├── memchr v2.7.4
+│   │   │   │       └── minimal-lexical v0.2.1
+│   │   │   ├── clang-sys v1.8.1
+│   │   │   │   ├── glob v0.3.1
+│   │   │   │   ├── libc v0.2.162
+│   │   │   │   └── libloading v0.8.5
+│   │   │   │       └── cfg-if v1.0.0
+│   │   │   │   [build-dependencies]
+│   │   │   │   └── glob v0.3.1
+│   │   │   ├── itertools v0.12.1
+│   │   │   │   └── either v1.13.0
+│   │   │   ├── lazy_static v1.5.0
+│   │   │   ├── lazycell v1.3.0
+│   │   │   ├── log v0.4.22
+│   │   │   ├── prettyplease v0.2.25
+│   │   │   │   ├── proc-macro2 v1.0.89 (*)
+│   │   │   │   └── syn v2.0.87 (*)
+│   │   │   ├── proc-macro2 v1.0.89 (*)
+│   │   │   ├── quote v1.0.37 (*)
+│   │   │   ├── regex v1.11.1
+│   │   │   │   ├── aho-corasick v1.1.3
+│   │   │   │   │   └── memchr v2.7.4
+│   │   │   │   ├── memchr v2.7.4
+│   │   │   │   ├── regex-automata v0.4.9
+│   │   │   │   │   ├── aho-corasick v1.1.3 (*)
+│   │   │   │   │   ├── memchr v2.7.4
+│   │   │   │   │   └── regex-syntax v0.8.5
+│   │   │   │   └── regex-syntax v0.8.5
+│   │   │   ├── rustc-hash v1.1.0
+│   │   │   ├── shlex v1.3.0
+│   │   │   ├── syn v2.0.87 (*)
+│   │   │   └── which v4.4.2
+│   │   │       ├── either v1.13.0
+│   │   │       ├── home v0.5.9
+│   │   │       └── rustix v0.38.40
+│   │   │           ├── bitflags v2.6.0
+│   │   │           └── linux-raw-sys v0.4.14
+│   │   ├── cargo_metadata v0.18.1
+│   │   │   ├── camino v1.1.9
+│   │   │   │   └── serde v1.0.215
+│   │   │   │       └── serde_derive v1.0.215 (proc-macro)
+│   │   │   │           ├── proc-macro2 v1.0.89 (*)
+│   │   │   │           ├── quote v1.0.37 (*)
+│   │   │   │           └── syn v2.0.87 (*)
+│   │   │   ├── cargo-platform v0.1.8
+│   │   │   │   └── serde v1.0.215 (*)
+│   │   │   ├── semver v1.0.23
+│   │   │   │   └── serde v1.0.215 (*)
+│   │   │   ├── serde v1.0.215 (*)
+│   │   │   ├── serde_json v1.0.132
+│   │   │   │   ├── itoa v1.0.11
+│   │   │   │   ├── memchr v2.7.4
+│   │   │   │   ├── ryu v1.0.18
+│   │   │   │   └── serde v1.0.215 (*)
+│   │   │   └── thiserror v1.0.69
+│   │   │       └── thiserror-impl v1.0.69 (proc-macro)
+│   │   │           ├── proc-macro2 v1.0.89 (*)
+│   │   │           ├── quote v1.0.37 (*)
+│   │   │           └── syn v2.0.87 (*)
+│   │   ├── embuild v0.32.0
+│   │   │   ├── anyhow v1.0.93
+│   │   │   ├── bindgen v0.69.5 (*)
+│   │   │   ├── bitflags v1.3.2
+│   │   │   ├── cmake v0.1.51
+│   │   │   │   └── cc v1.2.1
+│   │   │   │       └── shlex v1.3.0
+│   │   │   ├── filetime v0.2.25
+│   │   │   │   ├── cfg-if v1.0.0
+│   │   │   │   └── libc v0.2.162
+│   │   │   ├── globwalk v0.8.1
+│   │   │   │   ├── bitflags v1.3.2
+│   │   │   │   ├── ignore v0.4.23
+│   │   │   │   │   ├── crossbeam-deque v0.8.5
+│   │   │   │   │   │   ├── crossbeam-epoch v0.9.18
+│   │   │   │   │   │   │   └── crossbeam-utils v0.8.20
+│   │   │   │   │   │   └── crossbeam-utils v0.8.20
+│   │   │   │   │   ├── globset v0.4.15
+│   │   │   │   │   │   ├── aho-corasick v1.1.3 (*)
+│   │   │   │   │   │   ├── bstr v1.11.0
+│   │   │   │   │   │   │   └── memchr v2.7.4
+│   │   │   │   │   │   ├── log v0.4.22
+│   │   │   │   │   │   ├── regex-automata v0.4.9 (*)
+│   │   │   │   │   │   └── regex-syntax v0.8.5
+│   │   │   │   │   ├── log v0.4.22
+│   │   │   │   │   ├── memchr v2.7.4
+│   │   │   │   │   ├── regex-automata v0.4.9 (*)
+│   │   │   │   │   ├── same-file v1.0.6
+│   │   │   │   │   └── walkdir v2.5.0
+│   │   │   │   │       └── same-file v1.0.6
+│   │   │   │   └── walkdir v2.5.0 (*)
+│   │   │   ├── home v0.5.9
+│   │   │   ├── log v0.4.22
+│   │   │   ├── regex v1.11.1 (*)
+│   │   │   ├── remove_dir_all v0.8.4
+│   │   │   │   ├── cfg-if v1.0.0
+│   │   │   │   ├── cvt v0.1.2
+│   │   │   │   │   └── cfg-if v1.0.0
+│   │   │   │   ├── fs_at v0.2.1
+│   │   │   │   │   ├── cfg-if v1.0.0
+│   │   │   │   │   ├── cvt v0.1.2 (*)
+│   │   │   │   │   ├── libc v0.2.162
+│   │   │   │   │   └── nix v0.29.0
+│   │   │   │   │       ├── bitflags v2.6.0
+│   │   │   │   │       ├── cfg-if v1.0.0
+│   │   │   │   │       └── libc v0.2.162
+│   │   │   │   │       [build-dependencies]
+│   │   │   │   │       └── cfg_aliases v0.2.1
+│   │   │   │   ├── libc v0.2.162
+│   │   │   │   └── normpath v1.3.0
+│   │   │   ├── serde v1.0.215 (*)
+│   │   │   ├── serde_json v1.0.132 (*)
+│   │   │   ├── shlex v1.3.0
+│   │   │   ├── strum v0.24.1
+│   │   │   │   └── strum_macros v0.24.3 (proc-macro)
+│   │   │   │       ├── heck v0.4.1
+│   │   │   │       ├── proc-macro2 v1.0.89 (*)
+│   │   │   │       ├── quote v1.0.37 (*)
+│   │   │   │       ├── rustversion v1.0.18 (proc-macro)
+│   │   │   │       └── syn v1.0.109
+│   │   │   │           ├── proc-macro2 v1.0.89 (*)
+│   │   │   │           ├── quote v1.0.37 (*)
+│   │   │   │           └── unicode-ident v1.0.13
+│   │   │   ├── tempfile v3.14.0
+│   │   │   │   ├── cfg-if v1.0.0
+│   │   │   │   ├── fastrand v2.2.0
+│   │   │   │   ├── once_cell v1.20.2
+│   │   │   │   └── rustix v0.38.40 (*)
+│   │   │   ├── thiserror v1.0.69 (*)
+│   │   │   └── which v4.4.2 (*)
+│   │   ├── envy v0.4.2
+│   │   │   └── serde v1.0.215 (*)
+│   │   ├── regex v1.11.1 (*)
+│   │   ├── serde v1.0.215 (*)
+│   │   ├── strum v0.24.1 (*)
+│   │   └── which v4.4.2 (*)
+│   ├── heapless v0.8.0 (*)
+│   ├── log v0.4.22
+│   ├── nb v1.1.0
+│   └── num_enum v0.7.3
+│       └── num_enum_derive v0.7.3 (proc-macro)
+│           ├── proc-macro2 v1.0.89 (*)
+│           ├── quote v1.0.37 (*)
+│           └── syn v2.0.87 (*)
+│   [build-dependencies]
+│   └── embuild v0.32.0 (*)
+├── esp-idf-svc v0.49.1
+│   ├── embassy-futures v0.1.1
+│   ├── embassy-time-driver v0.1.0
+│   │   └── document-features v0.2.10 (proc-macro)
+│   │       └── litrs v0.4.1
+│   ├── embedded-hal-async v1.0.0 (*)
+│   ├── embedded-svc v0.28.0
+│   │   ├── embedded-io v0.6.1
+│   │   ├── embedded-io-async v0.6.1 (*)
+│   │   ├── enumset v1.1.5 (*)
+│   │   ├── heapless v0.8.0 (*)
+│   │   └── serde v1.0.215
+│   │       └── serde_derive v1.0.215 (proc-macro) (*)
+│   ├── enumset v1.1.5 (*)
+│   ├── esp-idf-hal v0.44.1 (*)
+│   ├── heapless v0.8.0 (*)
+│   ├── log v0.4.22
+│   ├── num_enum v0.7.3 (*)
+│   └── uncased v0.9.10
+│       [build-dependencies]
+│       └── version_check v0.9.5
+│   [build-dependencies]
+│   └── embuild v0.32.0 (*)
+├── esp-idf-sys v0.35.0 (*)
+├── log v0.4.22
+├── lvgl v0.6.2 (https://github.com/enelson1001/lv_binding_rust#723ad383)
+│   ├── bitflags v2.6.0
+│   ├── cstr_core v0.2.6 (*)
+│   ├── ctor v0.2.8 (proc-macro)
+│   │   ├── quote v1.0.37 (*)
+│   │   └── syn v2.0.87 (*)
+│   ├── cty v0.2.2
+│   ├── embedded-graphics v0.8.1
+│   │   ├── az v1.2.1
+│   │   ├── byteorder v1.5.0
+│   │   ├── embedded-graphics-core v0.4.0 (*)
+│   │   ├── float-cmp v0.9.0
+│   │   │   └── num-traits v0.2.19
+│   │   │       [build-dependencies]
+│   │   │       └── autocfg v1.4.0
+│   │   └── micromath v2.1.0
+│   ├── lvgl-sys v0.6.2 (https://github.com/enelson1001/lv_binding_rust#723ad383)
+│   │   └── cty v0.2.2
+│   │   [build-dependencies]
+│   │   ├── bindgen v0.65.1
+│   │   │   ├── bitflags v1.3.2
+│   │   │   ├── cexpr v0.6.0 (*)
+│   │   │   ├── clang-sys v1.8.1 (*)
+│   │   │   ├── lazy_static v1.5.0
+│   │   │   ├── lazycell v1.3.0
+│   │   │   ├── log v0.4.22
+│   │   │   ├── peeking_take_while v0.1.2
+│   │   │   ├── prettyplease v0.2.25 (*)
+│   │   │   ├── proc-macro2 v1.0.89 (*)
+│   │   │   ├── quote v1.0.37 (*)
+│   │   │   ├── regex v1.11.1 (*)
+│   │   │   ├── rustc-hash v1.1.0
+│   │   │   ├── shlex v1.3.0
+│   │   │   ├── syn v2.0.87 (*)
+│   │   │   └── which v4.4.2 (*)
+│   │   └── cc v1.2.1 (*)
+│   └── paste v1.0.15 (proc-macro)
+│   [build-dependencies]
+│   ├── lvgl-codegen v0.6.2 (https://github.com/enelson1001/lv_binding_rust#723ad383)
+│   │   ├── Inflector v0.11.4
+│   │   │   ├── lazy_static v1.5.0
+│   │   │   └── regex v1.11.1 (*)
+│   │   ├── lazy_static v1.5.0
+│   │   ├── proc-macro2 v1.0.89 (*)
+│   │   ├── quote v1.0.37 (*)
+│   │   ├── regex v1.11.1 (*)
+│   │   └── syn v2.0.87 (*)
+│   ├── lvgl-sys v0.6.2 (https://github.com/enelson1001/lv_binding_rust#723ad383)
+│   │   └── cty v0.2.2
+│   │   [build-dependencies]
+│   │   ├── bindgen v0.65.1 (*)
+│   │   └── cc v1.2.1 (*)
+│   ├── proc-macro2 v1.0.89 (*)
+│   └── quote v1.0.37 (*)
+├── lvgl-sys v0.6.2 (https://github.com/enelson1001/lv_binding_rust#723ad383) (*)
+├── mipidsi v0.8.0
+│   ├── display-interface v0.5.0
+│   ├── embedded-graphics-core v0.4.0 (*)
+│   ├── embedded-hal v1.0.0
+│   ├── heapless v0.8.0 (*)
+│   └── nb v1.1.0
+└── static_cell v2.1.0
+    └── portable-atomic v1.9.0
+[build-dependencies]
+└── embuild v0.32.0 (*)

@@ -4,7 +4,7 @@ target = "xtensa-esp32-espidf"
 [target.xtensa-esp32-espidf]
 linker = "ldproxy"
 # runner = "espflash --monitor" # Select this runner for espflash v1.x.x
-runner = "espflash flash --monitor" # Select this runner for espflash v2.x.x
+runner = "espflash flash --monitor --baud 921600" # Select this runner for espflash v2.x.x
 rustflags = [
     # Extending time_t for ESP IDF 5: https://github.com/esp-rs/rust/issues/110
     "--cfg",
@@ -31,3 +31,6 @@ CROSS_COMPILE = "xtensa-esp32-elf"
 
 # Directory for custom fonts (written in C) that Lvgl can use
 LVGL_FONTS_DIR = {relative = true, value = "custom-fonts"}
+
+PATH="/usr/lib64/ccache:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/var/lib/snapd/snap/bin:/home/yannik/.rustup/toolchains/esp/xtensa-esp32s2-elf/esp-2021r2-patch5-8_4_0/xtensa-esp32s2-elf/bin:/home/yannik/.rustup/toolchains/esp/xtensa-esp32s3-elf/esp-2021r2-patch5-8_4_0/xtensa-esp32s3-elf/bin:/home/yannik/.rustup/toolchains/esp/xtensa-esp32-elf/esp-2021r2-patch5-8_4_0/xtensa-esp32-elf/bin:/home/yannik/.rustup/toolchains/esp/riscv32-esp-elf/esp-2021r2-patch5-8_4_0/riscv32-esp-elf/bin:"
+LIBCLANG_PATH="/home/yannik/.rustup/toolchains/esp/xtensa-esp32-elf-clang/esp-15.0.0-20221201/esp-clang/lib"

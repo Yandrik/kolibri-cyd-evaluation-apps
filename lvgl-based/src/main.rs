@@ -125,7 +125,6 @@ fn main() -> Result<(), LvError> {
             style_time.set_text_align(TextAlign::Center);
 
             // Custom font requires lvgl-sys in Cargo.toml and 'use lvgl_sys' in this file
-            style_time.set_text_font(unsafe { Font::new_raw(lvgl_sys::gotham_bold_80) });
 
             time.add_style(Part::Main, &mut style_time);
 
@@ -148,7 +147,7 @@ fn main() -> Result<(), LvError> {
                 lvgl::task_handler();
 
                 // Simulate clock - so sleep for one second so time text is incremented in seconds
-                delay::FreeRtos::delay_ms(1000);
+                delay::FreeRtos::delay_ms(1);
 
                 lvgl::tick_inc(Instant::now().duration_since(start));
             }
