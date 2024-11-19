@@ -1,6 +1,7 @@
 use std::{
     cell::RefCell,
     cmp::min,
+    str::FromStr,
     sync::mpsc::channel,
     thread,
     time::{Duration, Instant},
@@ -24,16 +25,19 @@ use lvgl::{
         pointer::{Pointer, PointerInputData},
         InputDriver,
     },
-    style::{FlexAlign, FlexFlow, Style},
-    widgets::{Btn, Label},
+    style::{FlexAlign, FlexFlow, Layout, Style},
+    widgets::{Btn, Label, Slider, Switch},
     Align,
+    AnimationState,
     Color,
     Display,
     DrawBuffer,
     Event,
     LvError,
+    NativeObject,
     Obj,
     Part,
+    Screen,
     TextAlign,
     Widget,
 };
@@ -44,98 +48,47 @@ use mipidsi::{
 };
 use xpt2046::Xpt2046;
 
+fn lerp_fixed(start: u8, end: u8, t: u8, max_t: u8) -> u8 {
+    let (start, end, t, max_t) = (start as u16, end as u16, t as u16, max_t as u16);
+    let t = t.min(max_t);
+    let result = start + ((end - start.min(end)) * t + (max_t / 2)) / max_t;
+    result as u8
+}
+
+#[derive(Debug, Clone)]
+struct Lamp {
+    pub name: heapless::String<64>,
+    pub on: bool,
+    pub brightness: u8,
+}
+
+impl Lamp {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: heapless::String::from(heapless::String::from_str(name).unwrap()),
+            on: false,
+            brightness: 255,
+        }
+    }
+}
+
+enum Page<'a> {
+    Home,
+    LampCtrl(&'a Lamp),
+}
 struct AppData {
-    timer_start: Instant,
-    timer_set_duration: Duration,
-    timer_remaining_duration: Duration,
-    timer_running: bool,
-    timer_paused: bool,
+    lamps: heapless::Vec<Lamp, 8>,
 }
 
 impl AppData {
     fn new() -> Self {
         Self {
-            timer_start: Instant::now(),
-            timer_set_duration: Duration::from_secs(10),
-            timer_remaining_duration: Duration::from_secs(10),
-            timer_running: false,
-            timer_paused: false,
+            lamps: heapless::Vec::new(),
         }
     }
 
-    fn set_timer_duration(&mut self, duration: Duration) {
-        self.timer_set_duration = duration;
-    }
-
-    fn add_secs(&mut self, secs: u64) {
-        self.set_timer_duration(
-            self.timer_set_duration
-                .checked_add(Duration::from_secs(secs))
-                .unwrap_or(Duration::from_secs(5999))
-                .min(Duration::from_secs(5999)),
-        );
-    }
-
-    fn sub_secs(&mut self, secs: u64) {
-        self.set_timer_duration(
-            self.timer_set_duration
-                .checked_sub(Duration::from_secs(secs))
-                .unwrap_or(Duration::from_secs(10))
-                .max(Duration::from_secs(10)),
-        );
-    }
-
-    fn start_timer(&mut self) {
-        if !self.timer_paused {
-            self.timer_remaining_duration = self.timer_set_duration;
-        }
-
-        self.timer_start = Instant::now();
-        self.timer_running = true;
-        self.timer_paused = false;
-    }
-
-    fn pause_timer(&mut self) {
-        self.timer_paused = true;
-        self.timer_remaining_duration = self
-            .timer_remaining_duration
-            .checked_sub(self.timer_start.elapsed())
-            .unwrap_or(Duration::from_secs(0));
-    }
-
-    fn reset_timer(&mut self) {
-        self.timer_start = Instant::now();
-        self.timer_paused = false;
-        self.timer_running = false;
-        self.timer_remaining_duration = self.timer_set_duration;
-    }
-
-    fn remaining(&self) -> Duration {
-        if self.timer_stopped() {
-            self.timer_set_duration
-        } else if self.timer_paused() {
-            self.timer_remaining_duration
-        } else {
-            self.timer_remaining_duration
-                .checked_sub(self.timer_start.elapsed())
-                .unwrap_or(Duration::from_secs(0))
-        }
-    }
-
-    fn timer_stopped(&self) -> bool {
-        !self.timer_running
-    }
-
-    fn timer_paused(&self) -> bool {
-        self.timer_running && self.timer_paused
-    }
-
-    fn timer_running(&self) -> bool {
-        self.timer_running && !self.timer_paused
-    }
-
-    fn timer_finished(&self) -> bool {
-        self.timer_running && self.remaining() == Duration::from_secs(0)
+    fn add_lamp(&mut self, name: &str) {
+        self.lamps.push(Lamp::new(name)).unwrap();
     }
 }
 
@@ -254,7 +207,7 @@ fn main() -> Result<(), LvError> {
             let display = Display::register(buffer, HOR_RES, VER_RES, |refresh| {
                 raw_display.draw_iter(refresh.as_pixels()).unwrap();
             })
-            .unwrap();
+                .unwrap();
 
             // Register a new input device that's capable of reading the current state of
             // the input
@@ -280,21 +233,160 @@ fn main() -> Result<(), LvError> {
             let mut screen_style = Style::default();
             screen_style.set_bg_color(Color::from_rgb((0, 0, 0)));
             screen_style.set_radius(0);
+            screen_style.set_layout(Layout::flex());
+            screen_style.set_flex_flow(FlexFlow::ROW_WRAP);
+            screen_style.set_flex_main_place(FlexAlign::CENTER);
+            screen_style.set_flex_cross_place(FlexAlign::CENTER);
             screen.add_style(Part::Main, &mut screen_style);
 
-            let mut time = Label::new().unwrap();
-            time.set_text(CString::new("00:10:000").unwrap().as_c_str());
-            let mut style_time = Style::default();
-            style_time.set_text_color(Color::from_rgb((255, 255, 255))); // white
-            style_time.set_text_align(TextAlign::Center);
-            unsafe { style_time.set_text_font(Font::new_raw(lvgl_sys::lv_font_montserrat_24)) };
 
-            // Custom font requires lvgl-sys in Cargo.toml and 'use lvgl_sys' in this file
+            appdata.add_lamp("Front Door");
+            appdata.add_lamp("Living Room");
+            appdata.add_lamp("Bedroom");
+            appdata.add_lamp("Bathroom");
+            appdata.add_lamp("Porch");
 
-            time.add_style(Part::Main, &mut style_time);
+            let mut light_page = Screen::blank().unwrap();
+            light_page.set_size(320, 240);
+            let mut light_page_style = Style::default();
+            light_page_style.set_bg_color(Color::from_rgb((0, 0, 0)));
+            light_page_style.set_radius(0);
+            light_page.add_style(Part::Main, &mut light_page_style);
 
-            // Time text will be centered in screen
-            time.set_align(Align::Center, 0, 0);
+            let mut light_page_title_label = Label::create(&mut light_page).unwrap();
+            let mut light_page_title_style = Style::default();
+            light_page_title_style.set_text_color(Color::from_rgb((255, 255, 255)));
+            unsafe { light_page_title_style.set_text_font(Font::new_raw(lvgl_sys::lv_font_montserrat_24)) };
+            light_page_title_label.add_style(Part::Main, &mut light_page_title_style);
+            light_page_title_label.set_align(Align::TopMid, 0, 6);
+
+
+            let mut brightness_slider = Slider::create(&mut light_page).unwrap();
+            brightness_slider.set_size(250, 10);
+            // brightness_slider.range(0..255);
+            brightness_slider.set_value(0, AnimationState::OFF);
+            brightness_slider.set_align(Align::Center, 0, -20);
+
+            let mut brightness_slider_label = Label::create(&mut light_page).unwrap();
+            // no text for now
+            let mut white_text_style = Style::default();
+            white_text_style.set_text_color(Color::from_rgb((255, 255, 255)));
+            unsafe { white_text_style.set_text_font(Font::new_raw(lvgl_sys::lv_font_montserrat_14)) };
+            brightness_slider_label.add_style(Part::Main, &mut white_text_style);
+            brightness_slider_label.set_text(CString::new("Brightness").unwrap().as_c_str());
+            brightness_slider_label.set_align(Align::Center, 0, -50);
+
+
+            // Add switch
+            let mut light_switch = Switch::create(&mut light_page).unwrap();
+            light_switch.set_align(Align::Center, 0, 40);
+
+            let mut light_switch_label = Label::create(&mut light_page).unwrap();
+            // no text for now
+            let mut lslabel_style = Style::default();
+            lslabel_style.set_text_color(Color::from_rgb((255, 255, 255)));
+            unsafe { lslabel_style.set_text_font(Font::new_raw(lvgl_sys::lv_font_montserrat_14)) };
+            light_switch_label.add_style(Part::Main, &mut lslabel_style);
+            light_switch_label.set_text(CString::new("On/Off").unwrap().as_c_str());
+            light_switch_label.set_align(Align::Center, 0, 10);
+
+            // Add back button
+            let mut back_btn = Btn::create(&mut light_page).unwrap();
+            back_btn.set_size(40, 40);
+            back_btn.set_align(Align::TopLeft, 10, 10);
+            back_btn.on_event(|_btn, event| {
+                if let Event::Pressed = event {
+                    display.set_scr_act(&mut screen);
+                }
+            });
+
+            let mut back_label = Label::create(&mut back_btn).unwrap();
+            back_label.set_text(CString::new(b"\xef\x81\x93").unwrap().as_c_str()); // Font Awesome left arrow
+            let mut back_style = Style::default();
+            unsafe { back_style.set_text_font(Font::new_raw(lvgl_sys::lv_font_montserrat_24)) };
+            back_label.add_style(Part::Main, &mut back_style);
+
+            let mut light_ctrls = heapless::Vec::<(Btn, Label, Label), 8>::new();
+
+            let mut page = Page::Home;
+
+            for lamp in appdata.lamps.iter_mut() {
+                let mut cont = Btn::new().unwrap();
+                cont.set_size(100, 110);
+                // cont.set_align(Align::TopLeft, 0, 0);
+
+                cont.on_event(|_btn, event| {
+                    if let Event::Pressed = event {
+                        println!("lamp {:?}", lamp.name);
+                        // page = Page::LampCtrl(lamp);
+
+                        brightness_slider.set_value(lerp_fixed(0, 100, lamp.brightness, 255).into(), AnimationState::OFF);
+                        unsafe {
+                            if lamp.on {
+                                lvgl_sys::lv_obj_add_state(light_switch.raw().as_ptr(), lvgl_sys::LV_STATE_CHECKED as u16);
+                            } else {
+                                lvgl_sys::lv_obj_clear_state(light_switch.raw().as_ptr(), lvgl_sys::LV_STATE_CHECKED as u16);
+                            }
+                        }
+                        light_switch.on_event(|_ls, event| {
+                            if let Event::ValueChanged | Event::Released = event {
+                                let on = unsafe { lvgl_sys::lv_obj_has_state(_ls.raw().as_ptr(), lvgl_sys::LV_STATE_CHECKED as u16) };
+                                lamp.on = on;
+                            }
+                        });
+                        brightness_slider.on_event(|_sldr, event| {
+                            // println!("event: {:?}", event);
+                            if let Event::ValueChanged | Event::Released = event {
+                                let brightness = _sldr.get_value();
+                                println!("brightness: {}", brightness);
+                                lamp.brightness = lerp_fixed(0, 255, brightness as u8, 100);
+                                println!("brightness: {}", lamp.brightness);
+                            }
+                        });
+                        light_page_title_label.set_text(CString::new(lamp.name.as_str()).unwrap().as_c_str());
+
+                        display.set_scr_act(&mut light_page);
+                    }
+                });
+
+                let mut style_name = Style::default();
+                style_name.set_text_align(TextAlign::Center);
+                style_name.set_text_color(Color::from_rgb((255, 255, 255)));
+                unsafe { style_name.set_text_font(Font::new_raw(lvgl_sys::lv_font_montserrat_14)) };
+
+                let mut style_icon = Style::default();
+                style_icon.set_text_color(Color::from_rgb((255, 255, 255)));
+                unsafe { style_icon.set_text_font(Font::new_raw(lvgl_sys::lv_font_montserrat_32)) };
+                style_icon.set_text_align(TextAlign::Center);
+
+
+                let mut icon = Label::create(&mut cont).unwrap();
+                icon.set_text(CString::new(b"\xef\x84\xa4").unwrap().as_c_str());
+                icon.add_style(Part::Main, Box::leak(Box::new(style_icon)));
+                icon.set_align(Align::Center, 0, 0);
+
+                let mut name = Label::create(&mut cont).unwrap();
+                name.set_text(CString::new(lamp.name.as_str()).unwrap().as_c_str());
+                // style_name.set_text_color(Color::from_rgb((255, 255, 255))); // white
+                name.add_style(Part::Main, Box::leak(Box::new(style_name)));
+                name.set_align(Align::BottomMid, 0, -4);
+
+                light_ctrls.push((cont, icon, name))
+                    .unwrap();
+            }
+
+
+            // let mut time = Label::new().unwrap();
+            // time.set_text(CString::new("00:10:000").unwrap().as_c_str());
+            // let mut style_time = Style::default();
+            // style_time.set_text_color(Color::from_rgb((255, 255, 255))); // white
+            // style_time.set_text_align(TextAlign::Center);
+            // unsafe { style_time.set_text_font(Font::new_raw(lvgl_sys::lv_font_montserrat_24)) };
+            // time.add_style(Part::Main, &mut style_time);
+            // time.set_align(Align::Center, 0, 0);
+
+            /*
+
 
             // let mut cont = Obj::new().unwrap();
             // cont.set_size(320, 50);
@@ -401,23 +493,11 @@ fn main() -> Result<(), LvError> {
             let mut was_finished = false;
             let mut last_rem_time: Duration = appdata.remaining() + Duration::from_millis(10);
 
+             */
+
+            let mut last_time = Instant::now();
             loop {
                 let start_time = Instant::now();
-                let rem_time = appdata.remaining();
-                let val = CString::new(format!("{:02}:{:02}:{:03}",
-                                           rem_time.as_secs() / 60,
-                                           rem_time.as_secs() % 60,
-                                           rem_time.as_millis() % 1000)).unwrap();
-
-                time.set_text(&val).unwrap();
-                last_rem_time = rem_time;
-
-
-                if !was_finished && appdata.timer_finished() {
-                    was_finished = true;
-                    btn_lbl4.set_text(CString::new(STOP).unwrap().as_c_str());
-                }
-                was_finished = appdata.timer_finished();
 
                 let start_draw_time = Instant::now();
                 lvgl::task_handler();
@@ -426,7 +506,9 @@ fn main() -> Result<(), LvError> {
                 // seconds
                 // delay::FreeRtos::delay_ms(1);
 
-                lvgl::tick_inc(Instant::now().duration_since(start_time));
+                let now_time = Instant::now();
+                lvgl::tick_inc(now_time.duration_since(last_time));
+                last_time = now_time;
 
 
                 let end_time = Instant::now();
@@ -445,13 +527,12 @@ fn main() -> Result<(), LvError> {
                         proc_time.as_millis(),
                         proc_time.as_micros() % 100,
                         (draw_time + prep_time + proc_time).as_millis(),
-                        (draw_time + prep_time + proc_time).as_micros() % 100,            );
+                        (draw_time + prep_time + proc_time).as_micros() % 100, );
                 }
                 raw_display.reset_time();
 
                 delay::FreeRtos::delay_ms(2);
             }
-
         })
         .unwrap();
 

@@ -1,6 +1,7 @@
 use std::{
     cell::RefCell,
     cmp::min,
+    str::FromStr,
     sync::mpsc::channel,
     thread,
     time::{Duration, Instant},
@@ -24,16 +25,19 @@ use lvgl::{
         pointer::{Pointer, PointerInputData},
         InputDriver,
     },
-    style::{FlexAlign, FlexFlow, Style},
-    widgets::{Btn, Label},
+    style::{FlexAlign, FlexFlow, Layout, Style},
+    widgets::{Arc, Btn, Label, Slider, Switch},
     Align,
+    AnimationState,
     Color,
     Display,
     DrawBuffer,
     Event,
     LvError,
+    NativeObject,
     Obj,
     Part,
+    Screen,
     TextAlign,
     Widget,
 };
@@ -44,12 +48,26 @@ use mipidsi::{
 };
 use xpt2046::Xpt2046;
 
+fn lerp_fixed(start: u8, end: u8, t: u8, max_t: u8) -> u8 {
+    let (start, end, t, max_t) = (start as u16, end as u16, t as u16, max_t as u16);
+    let t = t.min(max_t);
+    let result = start + ((end - start.min(end)) * t + (max_t / 2)) / max_t;
+    result as u8
+}
+
+#[derive(Debug, Clone)]
+struct Lamp {
+    pub name: heapless::String<64>,
+    pub on: bool,
+    pub brightness: u8,
+}
 struct AppData {
     timer_start: Instant,
     timer_set_duration: Duration,
     timer_remaining_duration: Duration,
     timer_running: bool,
     timer_paused: bool,
+    wattage_level: u8,
 }
 
 impl AppData {
@@ -60,6 +78,7 @@ impl AppData {
             timer_remaining_duration: Duration::from_secs(10),
             timer_running: false,
             timer_paused: false,
+            wattage_level: 5,
         }
     }
 
@@ -136,6 +155,23 @@ impl AppData {
 
     fn timer_finished(&self) -> bool {
         self.timer_running && self.remaining() == Duration::from_secs(0)
+    }
+
+    fn set_wattage_level(&mut self, level: u8) {
+        assert!(level < 6, "wattage level cannot be over 6");
+        self.wattage_level = level;
+    }
+
+    fn get_wattage_level_str(&self) -> &'static str {
+        match self.wattage_level {
+            0 => "180W",
+            1 => "220W",
+            2 => "360W",
+            3 => "480W",
+            4 => "620W",
+            5 => "800W",
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -254,7 +290,7 @@ fn main() -> Result<(), LvError> {
             let display = Display::register(buffer, HOR_RES, VER_RES, |refresh| {
                 raw_display.draw_iter(refresh.as_pixels()).unwrap();
             })
-            .unwrap();
+                .unwrap();
 
             // Register a new input device that's capable of reading the current state of
             // the input
@@ -280,58 +316,73 @@ fn main() -> Result<(), LvError> {
             let mut screen_style = Style::default();
             screen_style.set_bg_color(Color::from_rgb((0, 0, 0)));
             screen_style.set_radius(0);
+            // screen_style.set_layout(Layout::flex());
+            // screen_style.set_flex_flow(FlexFlow::ROW_WRAP);
+            // screen_style.set_flex_main_place(FlexAlign::CENTER);
+            // screen_style.set_flex_cross_place(FlexAlign::CENTER);
             screen.add_style(Part::Main, &mut screen_style);
 
-            let mut time = Label::new().unwrap();
-            time.set_text(CString::new("00:10:000").unwrap().as_c_str());
+
+            let mut wattage_label = Label::create(&mut screen).unwrap();
+            wattage_label.set_align(Align::Center, -70, 0);
+            let mut wattage_style = Style::default();
+            wattage_style.set_text_color(Color::from_rgb((255, 255, 255)));
+            unsafe { wattage_style.set_text_font(Font::new_raw(lvgl_sys::lv_font_montserrat_32)) };
+            wattage_label.add_style(Part::Main, &mut wattage_style);
+            wattage_label.set_text(CString::new(appdata.get_wattage_level_str()).unwrap().as_c_str());
+
+
+            let mut power_arc = Arc::create(&mut screen).unwrap();
+            power_arc.set_size(150, 150);
+            power_arc.set_align(Align::Center, -70, 0);
+            power_arc.set_angles(135, 45); // Creates a 270-degree arc
+            power_arc.set_rotation(0);
+            power_arc.set_bg_angles(135, 45);
+            unsafe {
+                lvgl_sys::lv_arc_set_range(power_arc.raw().as_mut(), 0, 5);
+            }
+
+            power_arc.on_event(|arc, event| {
+                if let Event::ValueChanged = event {
+                    let mut value = unsafe {
+                        lvgl_sys::lv_arc_get_value(arc.raw().as_mut())
+                    };
+                    appdata.set_wattage_level((value as u8).min(6));
+                    wattage_label.set_text(CString::new(appdata.get_wattage_level_str()).unwrap().as_c_str());
+                }
+            });
+
+            // Add timer display on the right
+            let mut time_label = Label::new().unwrap();
+            time_label.set_text(CString::new("00:10:000").unwrap().as_c_str());
             let mut style_time = Style::default();
-            style_time.set_text_color(Color::from_rgb((255, 255, 255))); // white
+            style_time.set_text_color(Color::from_rgb((255, 255, 255)));
             style_time.set_text_align(TextAlign::Center);
             unsafe { style_time.set_text_font(Font::new_raw(lvgl_sys::lv_font_montserrat_24)) };
+            time_label.add_style(Part::Main, &mut style_time);
+            time_label.set_align(Align::Center, 80, 0);
 
-            // Custom font requires lvgl-sys in Cargo.toml and 'use lvgl_sys' in this file
-
-            time.add_style(Part::Main, &mut style_time);
-
-            // Time text will be centered in screen
-            time.set_align(Align::Center, 0, 0);
-
-            // let mut cont = Obj::new().unwrap();
-            // cont.set_size(320, 50);
-            // let mut style = Style::default();
-            // style.set_flex_flow(FlexFlow::ROW);
-            // style.set_flex_main_place(FlexAlign::SPACE_EVENLY);
-            // style.set_flex_cross_place(FlexAlign::CENTER);
-            // // style.set_bg_opa(0);
-            // style.set_border_width(0);
-            // cont.add_style(Part::Any, &mut style);
-            // cont.set_align(Align::Center, 0, 40);
-
+            // Add + and - buttons at bottom
             let mut button_add = Btn::create(&mut screen).unwrap();
-            button_add.set_align(Align::Center, -50, 32);
-            // button_add.set_pos(130, 150);
+            button_add.set_align(Align::Center, 10, 70);
             button_add.set_size(30, 30);
-            // button_add.set_align(Align::Center, 0, 0);
             let mut btn_lbl1 = Label::create(&mut button_add).unwrap();
             btn_lbl1.set_text(CString::new(b"+").unwrap().as_c_str());
 
+            let mut button_sub = Btn::create(&mut screen).unwrap();
+            button_sub.set_size(30, 30);
+            button_sub.set_align(Align::Center, 130, 70);
+            let mut btn_lbl2 = Label::create(&mut button_sub).unwrap();
+            btn_lbl2.set_text(CString::new(b"-").unwrap().as_c_str());
+
+            // Add timer control logic from timer.rs
             button_add.on_event(|_btn, event| {
                 if let Event::Pressed = event {
-                    println!("pressed");
                     if appdata.timer_stopped() {
                         appdata.add_secs(10);
                     }
                 }
-                // println!("Button received event: {:?}", event);
             });
-
-            let mut button_sub = Btn::create(&mut screen).unwrap();
-            // button_sub.set_pos(170, 150);
-            button_sub.set_size(30, 30);
-            button_sub.set_align(Align::Center, 50, 35);
-            // button_sub.set_align(Align::Center, 0, 0);
-            let mut btn_lbl2 = Label::create(&mut button_sub).unwrap();
-            btn_lbl2.set_text(CString::new(b"-").unwrap().as_c_str());
 
             button_sub.on_event(|_btn, event| {
                 if let Event::Pressed = event {
@@ -341,58 +392,69 @@ fn main() -> Result<(), LvError> {
                 }
             });
 
-            let mut center_label = Label::new().unwrap();
-            center_label.set_text(CString::new(b"+/- 10s").unwrap().as_c_str());
-            center_label.set_align(Align::Center, 0, 35);
-            let mut cl_style = Style::default();
-            cl_style.set_text_color(Color::from_rgb((255, 255, 255)));
-            center_label.add_style(Part::Main, &mut cl_style);
-
+            // Add reset button
             let mut button_reset = Btn::create(&mut screen).unwrap();
-            //button_reset.set_pos(123, 190);
-            button_reset.set_align(Align::Center, -22, 70);
+            button_reset.set_align(Align::Center, 50, 70);
             button_reset.set_size(35, 35);
             let mut btn_lbl3 = Label::create(&mut button_reset).unwrap();
             btn_lbl3.set_text(CString::new(b"\xEF\x80\xA1").unwrap().as_c_str());
 
-
+            // Add start/stop/pause button
             const PLAY: &'static [u8; 3] = b"\xEF\x81\x8B";
             const PAUSE: &'static [u8; 3] = b"\xEF\x81\x8C";
             const STOP: &'static [u8; 3] = b"\xEF\x81\x8D";
 
             let mut button_start_stop = Btn::create(&mut screen).unwrap();
-            // button_start_stop.set_pos(173, 190);
-            button_start_stop.set_align(Align::Center, 22, 70);
+            button_start_stop.set_align(Align::Center, 90, 70);
             button_start_stop.set_size(35, 35);
             let mut btn_lbl4 = Label::create(&mut button_start_stop).unwrap();
-            btn_lbl4.set_text(CString::new(b"\xEF\x81\x8B").unwrap().as_c_str());
+            btn_lbl4.set_text(CString::new(PLAY).unwrap().as_c_str());
 
+            // Add event handlers
             button_reset.on_event(|_btn, event| {
                 if let Event::Pressed = event {
                     appdata.reset_timer();
                     btn_lbl4.set_text(CString::new(PLAY).unwrap().as_c_str());
+                    unsafe {
+                        lvgl_sys::lv_obj_clear_state(button_add.raw().as_mut(), lvgl_sys::LV_STATE_DISABLED as u16);
+                        lvgl_sys::lv_obj_clear_state(button_sub.raw().as_mut(), lvgl_sys::LV_STATE_DISABLED as u16);
+                        lvgl_sys::lv_obj_clear_state(power_arc.raw().as_mut(), lvgl_sys::LV_STATE_DISABLED as u16);
+                    }
                 }
             });
 
             button_start_stop.on_event(|_btn, event| {
                 if let Event::Pressed = event {
                     if appdata.timer_finished() {
-                        // println!("Resetting finished timer");
                         appdata.reset_timer();
                         btn_lbl4.set_text(CString::new(PLAY).unwrap().as_c_str());
+                        // Enable all buttons
+                        unsafe {
+                            lvgl_sys::lv_obj_clear_state(button_add.raw().as_mut(), lvgl_sys::LV_STATE_DISABLED as u16);
+                            lvgl_sys::lv_obj_clear_state(button_sub.raw().as_mut(), lvgl_sys::LV_STATE_DISABLED as u16);
+                            lvgl_sys::lv_obj_clear_state(power_arc.raw().as_mut(), lvgl_sys::LV_STATE_DISABLED as u16);
+                        }
                     } else if appdata.timer_running() {
-                        // println!("Pausing timer");
                         appdata.pause_timer();
                         btn_lbl4.set_text(CString::new(PLAY).unwrap().as_c_str());
+                        // Enable all buttons
+                        unsafe {
+                            lvgl_sys::lv_obj_clear_state(button_add.raw().as_mut(), lvgl_sys::LV_STATE_DISABLED as u16);
+                            lvgl_sys::lv_obj_clear_state(button_sub.raw().as_mut(), lvgl_sys::LV_STATE_DISABLED as u16);
+                            lvgl_sys::lv_obj_clear_state(power_arc.raw().as_mut(), lvgl_sys::LV_STATE_DISABLED as u16);
+                        }
                     } else {
-                        // println!("Starting timer");
                         appdata.start_timer();
                         if appdata.timer_finished() {
-                            // println!("Timer already finished");
                             btn_lbl4.set_text(CString::new(STOP).unwrap().as_c_str());
                         } else {
-                            // println!("Timer running");
                             btn_lbl4.set_text(CString::new(PAUSE).unwrap().as_c_str());
+                            // Disable buttons while running
+                            unsafe {
+                                lvgl_sys::lv_obj_add_state(button_add.raw().as_mut(), lvgl_sys::LV_STATE_DISABLED as u16);
+                                lvgl_sys::lv_obj_add_state(button_sub.raw().as_mut(), lvgl_sys::LV_STATE_DISABLED as u16);
+                                lvgl_sys::lv_obj_add_state(power_arc.raw().as_mut(), lvgl_sys::LV_STATE_DISABLED as u16);
+                            }
                         }
                     }
                 }
@@ -401,20 +463,22 @@ fn main() -> Result<(), LvError> {
             let mut was_finished = false;
             let mut last_rem_time: Duration = appdata.remaining() + Duration::from_millis(10);
 
+            let mut last_time = Instant::now();
             loop {
                 let start_time = Instant::now();
-                let rem_time = appdata.remaining();
-                let val = CString::new(format!("{:02}:{:02}:{:03}",
-                                           rem_time.as_secs() / 60,
-                                           rem_time.as_secs() % 60,
-                                           rem_time.as_millis() % 1000)).unwrap();
 
-                time.set_text(&val).unwrap();
-                last_rem_time = rem_time;
+                let dur = appdata.remaining();
+                if last_rem_time != dur {
+                    let val = CString::new(format!("{:02}:{:02}:{:03}",
+                                                    dur.as_secs() / 60,
+                                                    dur.as_secs() % 60,
+                                                    dur.as_millis() % 1000)).unwrap();
 
+                    time_label.set_text(&val).unwrap();
+                    last_rem_time = dur;
+                }
 
                 if !was_finished && appdata.timer_finished() {
-                    was_finished = true;
                     btn_lbl4.set_text(CString::new(STOP).unwrap().as_c_str());
                 }
                 was_finished = appdata.timer_finished();
@@ -422,12 +486,9 @@ fn main() -> Result<(), LvError> {
                 let start_draw_time = Instant::now();
                 lvgl::task_handler();
 
-                // Simulate clock - so sleep for one second so time text is incremented in
-                // seconds
-                // delay::FreeRtos::delay_ms(1);
-
-                lvgl::tick_inc(Instant::now().duration_since(start_time));
-
+                let now_time = Instant::now();
+                lvgl::tick_inc(now_time.duration_since(last_time));
+                last_time = now_time;
 
                 let end_time = Instant::now();
                 let draw_time = raw_display.get_time();
@@ -445,13 +506,12 @@ fn main() -> Result<(), LvError> {
                         proc_time.as_millis(),
                         proc_time.as_micros() % 100,
                         (draw_time + prep_time + proc_time).as_millis(),
-                        (draw_time + prep_time + proc_time).as_micros() % 100,            );
+                        (draw_time + prep_time + proc_time).as_micros() % 100, );
                 }
                 raw_display.reset_time();
 
                 delay::FreeRtos::delay_ms(2);
             }
-
         })
         .unwrap();
 

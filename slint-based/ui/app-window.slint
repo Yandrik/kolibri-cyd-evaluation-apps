@@ -5,20 +5,6 @@ export component AppWindow inherits Window {
     height: 240px;
     in-out property <int> counter: 42;
     callback request-increase-value();
-
-    VerticalBox {
-        alignment: start;
-        Text {
-            text: "Hello World!";
-            font-size: 24px;
-            horizontal-alignment: center;
-        }
-    }
-
-    Text {
-        text: "Counter App (Slint)";
-    }
-
     VerticalBox {
         Text {
             text: "Counter: \{root.counter}";
@@ -31,6 +17,6 @@ export component AppWindow inherits Window {
             }
         }
 
-        // AboutSlint { }
-     }
+        AboutSlint { }
+    }
 }

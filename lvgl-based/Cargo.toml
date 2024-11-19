@@ -1,18 +1,18 @@
 [workspace]
 
 [package]
-name         = "rust-m5stack-lvgl-demo"
-version      = "0.1.0"
-authors      = ["enelson1001 <ednelson5080@gmail>"]
-edition      = "2021"
-resolver     = "2"
+name = "rust-m5stack-lvgl-demo"
+version = "0.1.0"
+authors = ["enelson1001 <ednelson5080@gmail>"]
+edition = "2021"
+resolver = "2"
 rust-version = "1.71"
 
 [profile.release]
 opt-level = "s"
 
 [profile.dev]
-debug     = true # Symbols are nice and they don't increase the size on Flash
+debug = true # Symbols are nice and they don't increase the size on Flash
 opt-level = "z"
 
 [[bin]]
@@ -20,6 +20,12 @@ name = "starter"
 
 [[bin]]
 name = "timer"
+
+[[bin]]
+name = "light-control"
+
+[[bin]]
+name = "microwave-ui"
 
 [features]
 default = ["embassy", "esp-idf-svc/native", "std"]
@@ -36,13 +42,13 @@ embassy = [
 ]
 
 [dependencies]
-log         = { version = "0.4", default-features = false }
+log = { version = "0.4", default-features = false }
 esp-idf-svc = { version = "0.49.1", default-features = false }
 
 esp-idf-hal = { version = "0.44.1" }
 esp-idf-sys = { version = "0.35.0" }
 
-cstr_core              = "0.2.1"
+cstr_core = "0.2.1"
 embedded-graphics-core = "0.4.0"
 
 lvgl = { version = "0.6.2", default-features = false, features = [
@@ -53,19 +59,19 @@ lvgl = { version = "0.6.2", default-features = false, features = [
 lvgl-sys = { version = "0.6.2" }
 
 display-interface-spi = "0.5.0"
-mipidsi               = "0.8.0"
+mipidsi = "0.8.0"
 static_cell = "2.1.0"
 
 xpt2046 = { git = "https://github.com/Yandrik/xpt2046.git", version = "0.3.1" }
 
 embedded-graphics-profiler-display = { version = "0.1.0", path = "../embedded-graphics-profiler-display", features = ["std"] }
 
-
+heapless = "0.8.0"
 
 
 [build-dependencies]
 embuild = "0.32.0"
 
 [patch.crates-io]
-lvgl     = { git = "https://github.com/enelson1001/lv_binding_rust" }
+lvgl = { git = "https://github.com/enelson1001/lv_binding_rust" }
 lvgl-sys = { git = "https://github.com/enelson1001/lv_binding_rust" }

@@ -1,0 +1,114 @@
+import { Button, VerticalBox , AboutSlint } from "std-widgets.slint";
+
+export component TimerApp inherits Window {
+    width: 320px;
+    height: 240px;
+
+    callback add-10s();
+    callback sub-10s();
+    callback start-timer();
+    callback stop-timer();
+    callback reset-timer();
+
+    in property <bool> show-start-timer: true;
+    in property <bool> show-stop-timer: false;
+    in property <bool> show-reset-timer: false;
+
+    in property <string> timer-text: "00:00:000";
+
+    property <image> start-timer-icon: @image-url("../img/play.png");
+    property <image> stop-timer-icon: @image-url("../img/pause.png");
+    property <image> reset-timer-icon: @image-url("../img/xmark-square.png");
+
+    function multifunction-button-pressed() {
+        if (show-start-timer) {
+            start-timer();
+        }
+        if (show-stop-timer) {
+            stop-timer();
+        }
+        if (show-reset-timer) {
+            reset-timer();
+        }
+    }
+
+    function multifunction-button-icon() -> image {
+        if (show-start-timer) {
+            return start-timer-icon;
+        }
+        if (show-stop-timer) {
+            return stop-timer-icon;
+        }
+        if (show-reset-timer) {
+            return reset-timer-icon;
+        }
+        return start-timer-icon;
+    }
+
+    VerticalBox {
+        alignment: start;
+        Text {
+            text: "Timer App (Slint)";
+            font-size: 14px;
+            horizontal-alignment: center;
+        }
+    }
+
+    VerticalBox {
+        alignment: center;
+        Text {
+            text: timer-text;
+            font-size: 24px;
+            horizontal-alignment: center;
+        }
+
+        Rectangle {
+            height: 4px;
+        }
+
+        HorizontalLayout {
+            alignment: center;
+            spacing: 8px;
+
+            Button {
+                text: "+10s";
+                enabled: show-start-timer;
+                clicked => {
+                    add-10s();
+                }
+            }
+
+            Text {
+                text: "Set Timer";
+                vertical-alignment: center;
+            }
+
+            Button {
+                text: "-10s";
+                enabled: show-start-timer;
+                clicked => {
+                    sub-10s();
+                }
+            }
+        }
+
+        HorizontalLayout {
+            alignment: center;
+            spacing: 8px;
+            Button {
+                icon: @image-url("../img/restart.png");
+                clicked => {
+                    reset-timer();
+                }
+            }
+
+            Button {
+                icon: multifunction-button-icon();
+                // visible: root.show_start_timer;
+                clicked => {
+                    multifunction-button-pressed();
+                }
+            }
+        }
+    }
+}

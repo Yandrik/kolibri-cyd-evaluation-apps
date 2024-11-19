@@ -1,0 +1,164 @@
+import { Button, VerticalBox , AboutSlint, Slider, Switch } from "std-widgets.slint";
+
+export struct Light {
+    name: string,
+    brightness: int,
+    on: bool,
+}
+
+export component LightsApp inherits Window {
+    width: 320px;
+    height: 240px;
+
+    in property <bool> show-start-timer: true;
+    in property <bool> show-stop-timer: false;
+    in property <bool> show-reset-timer: false;
+
+    property <[Light]> lights: [
+        {
+            name: "Bathroom",
+            brightness: 100,
+            on: true,
+        },
+        {
+            name: "Bedroom",
+            brightness: 200,
+            on: true,
+        },
+        {
+            name: "Living Room",
+            brightness: 50,
+            on: false,
+        },
+        {
+            name: "Front Door",
+            brightness: 250,
+            on: false,
+        },
+        {
+            name: "Porch",
+            brightness: 1,
+            on: true,
+        },
+        // {name: "Bathroom", brightness: 4, on: false, },
+        ];
+
+        property <int> selected-light: 0;
+        property <bool> show-light-page: false;
+
+        in property <string> timer-text: "00:00:000";
+
+        property <image> start-timer-icon: @image-url("../img/play.png");
+        property <image> stop-timer-icon: @image-url("../img/pause.png");
+        property <image> reset-timer-icon: @image-url("../img/xmark-square.png");
+
+        property <image> light-icon: @image-url("../img/play.png");
+
+        VerticalBox {
+            alignment: start;
+            Text {
+                text: show-light-page ? lights[selected-light].name : "Light Control App (Slint)";
+                font-size: 14px;
+                horizontal-alignment: center;
+            }
+        }
+
+        if !show-light-page: VerticalLayout {
+            alignment: center;
+            spacing: 5px;
+            padding-top: 25px;
+            // height: 200px;
+        HorizontalLayout {
+                alignment: LayoutAlignment.center;
+                spacing: 6px;
+                for i in 3: HorizontalLayout {
+                    alignment: center;
+                    height: 100px;
+                    if i < lights.length:
+                    Button {
+                        width: 96px;
+                        height: 96px;
+                        // icon: light-icon;
+                        text: lights[i].name;
+                        clicked => {
+                            selected-light = i;
+                            show-light-page = true;
+                        }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                alignment: LayoutAlignment.center;
+                spacing: 6px;
+                for i in 3: HorizontalLayout {
+                    alignment: center;
+                    height: 100px;
+                    if i + 3 < lights.length:
+                    Button {
+                        width: 96px;
+                        height: 96px;
+                        // icon: light-icon;
+                        text: lights[i].name;
+                        clicked => {
+                            selected-light = i + 3;
+                            show-light-page = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if show-light-page: Rectangle {
+            VerticalLayout {
+                alignment: LayoutAlignment.center;
+                width: 320px;
+                spacing: 4px;
+
+                HorizontalLayout {
+                    alignment: LayoutAlignment.center;
+                    Slider {
+                        width: 250px;
+                        maximum: 255;
+                        value: lights[selected-light].brightness;
+                        changed(f) => {
+                            lights[selected-light].brightness = f
+                        }
+                    }
+                }
+
+                Text {
+                    text: "Brightness";
+                    horizontal-alignment: center;
+                }
+
+                Rectangle {
+                    height: 16px;
+                }
+
+                HorizontalLayout {
+                    alignment: LayoutAlignment.center;
+                    Switch {
+                        checked: lights[selected-light].on;
+                        toggled => {
+                            lights[selected-light].on = !lights[selected-light].on
+                        }
+                    }
+                }
+
+                Text {
+                    text: "On / Off";
+                    horizontal-alignment: center;
+                }
+            }
+
+            Button {
+                x: 10px;
+                y: 10px;
+                text: "<";
+                clicked => {
+                    show-light-page = false;
+                }
+            }
+        }
+    }

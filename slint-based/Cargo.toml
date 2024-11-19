@@ -15,6 +15,15 @@ build = "build.rs"
 [[bin]]
 name = "starter"
 
+[[bin]]
+name = "timer"
+
+[[bin]]
+name = "light-control"
+
+[[bin]]
+name = "microwave-ui"
+
 [dependencies]
 slint = { version = "1.8", default-features = false, features = ["compat-1-2", "renderer-software", "libm", "unsafe-single-threaded"] }
 
@@ -42,7 +51,7 @@ embedded-graphics-profiler-display = { version = "0.1.0", path = "../embedded-gr
 xpt2046 = { git = "https://github.com/Yandrik/xpt2046.git", version = "0.3.1" }
 
 
-esp-backtrace = { version = "0.14.2", features = ["esp32", "println"] }
+esp-backtrace = { version = "0.14.2", features = ["esp32", "println", "panic-handler", "exception-handler"] }
 
 static_cell = { version = "2.1.0", features = ["nightly"] }
 embedded-hal-bus = "0.2.0"

@@ -9,7 +9,6 @@ rustflags = [
     # Extending time_t for ESP IDF 5: https://github.com/esp-rs/rust/issues/110
     "--cfg",
     "espidf_time64",
-
     # Added the following 2 entries so lvgl will build without getting string.h file not found
     "--sysroot",
     "/home/ed/.rustup/toolchains/esp/xtensa-esp32s3-elf/esp-13.2.0_20230928/xtensa-esp-elf/xtensa-esp-elf/include",
@@ -30,7 +29,7 @@ DEP_LV_CONFIG_PATH = { relative = true, value = "lvgl-configs" }
 CROSS_COMPILE = "xtensa-esp32-elf"
 
 # Directory for custom fonts (written in C) that Lvgl can use
-LVGL_FONTS_DIR = {relative = true, value = "custom-fonts"}
+LVGL_FONTS_DIR = { relative = true, value = "custom-fonts" }
 
-PATH="/usr/lib64/ccache:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/var/lib/snapd/snap/bin:/home/yannik/.rustup/toolchains/esp/xtensa-esp32s2-elf/esp-2021r2-patch5-8_4_0/xtensa-esp32s2-elf/bin:/home/yannik/.rustup/toolchains/esp/xtensa-esp32s3-elf/esp-2021r2-patch5-8_4_0/xtensa-esp32s3-elf/bin:/home/yannik/.rustup/toolchains/esp/xtensa-esp32-elf/esp-2021r2-patch5-8_4_0/xtensa-esp32-elf/bin:/home/yannik/.rustup/toolchains/esp/riscv32-esp-elf/esp-2021r2-patch5-8_4_0/riscv32-esp-elf/bin:"
-LIBCLANG_PATH="/home/yannik/.rustup/toolchains/esp/xtensa-esp32-elf-clang/esp-15.0.0-20221201/esp-clang/lib"
+PATH = "/home/yannik/.rustup/toolchains/esp/xtensa-esp-elf/esp-14.2.0_20240906/xtensa-esp-elf/bin:/home/yannik/.local/share/pnpm:/home/yannik/.local/share/zinit/polaris/bin:/home/yannik/.rustup/toolchains/esp/xtensa-esp-elf/esp-14.2.0_20240906/xtensa-esp-elf/bin:/home/yannik/.surrealdb:/home/yannik/.pyenv/shims:/home/yannik/.pyenv/bin:/home/yannik/.cargo/bin:/home/yannik/.local/bin:/home/yannik/bin:/usr/local/bin:/usr/lib64/ccache:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/var/lib/snapd/snap/bin:/home/yannik/development/flutter/bin"
+LIBCLANG_PATH = "/home/yannik/.rustup/toolchains/esp/xtensa-esp32-elf-clang/esp-15.0.0-20221201/esp-clang/lib"
