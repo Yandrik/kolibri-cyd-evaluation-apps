@@ -383,7 +383,7 @@ async fn main(spawner: Spawner) {
                 .add_horizontal(IconButton::new(size32px::actions::AddCircle).smartstate(sm.next()))
                 .clicked()
             {
-                if !appdata.timer_running() {
+                if !(appdata.timer_running() || appdata.timer_paused()) {
                     appdata.add_secs(10);
                 }
             }
@@ -392,7 +392,7 @@ async fn main(spawner: Spawner) {
                 .add(IconButton::new(size32px::actions::MinusCircle).smartstate(sm.next()))
                 .clicked()
             {
-                if !appdata.timer_running() {
+                if !(appdata.timer_running() || appdata.timer_paused()) {
                     appdata.sub_secs(10);
                 }
             }
