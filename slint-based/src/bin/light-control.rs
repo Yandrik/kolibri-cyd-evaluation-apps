@@ -26,7 +26,9 @@ use esp_hal::interrupt::Priority;
 use esp_hal::{self, prelude::*};
 use esp_hal::{
     clock::ClockControl,
-    gpio::{GpioPin, Input, Io, Level, Output, Pull, NO_PIN},
+    gpio::{
+        GpioPin, Input, Io, Level, Output, Pull, NO_PIN,
+    },
     peripherals::{Peripherals, SPI2, SPI3},
     prelude::*,
     rtc_cntl::Rtc,
@@ -38,18 +40,22 @@ use esp_hal_embassy::InterruptExecutor;
 use esp_println::println;
 use mipidsi::{
     models::ILI9486Rgb565,
-    options::{ColorInversion, ColorOrder, Orientation, Rotation},
+    options::{
+        ColorInversion, ColorOrder, Orientation, Rotation,
+    },
     Builder, Display,
 };
 use slint::platform::software_renderer::MinimalSoftwareWindow;
-use slint::platform::{Platform, PointerEventButton, WindowEvent};
+use slint::platform::{
+    Platform, PointerEventButton, WindowEvent,
+};
 use slint::private_unstable_api::re_exports::LogicalPoint;
 use slint::LogicalPosition;
 use static_cell::StaticCell;
 use xpt2046::Xpt2046;
 
 use esp_alloc as _;
-
+use mipidsi::models::ILI9341Rgb565;
 // slint::slint!{ export MyUI := Window {} }
 /*
 slint::include_modules!();
@@ -59,14 +65,18 @@ slint::include_modules!();
 
 fn init_heap() {
     const HEAP_SIZE: usize = 64 * 1024;
-    static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
+    static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> =
+        MaybeUninit::uninit();
 
     unsafe {
-        esp_alloc::HEAP.add_region(esp_alloc::HeapRegion::new(
-            HEAP.as_mut_ptr() as *mut u8,
-            HEAP_SIZE,
-            esp_alloc::MemoryCapability::Internal.into(),
-        ));
+        esp_alloc::HEAP.add_region(
+            esp_alloc::HeapRegion::new(
+                HEAP.as_mut_ptr() as *mut u8,
+                HEAP_SIZE,
+                esp_alloc::MemoryCapability::Internal
+                    .into(),
+            ),
+        );
     }
 }
 
@@ -78,20 +88,31 @@ async fn touch_task(
         Output<'static, GpioPin<33>>,
         &'static mut Delay,
     >,
-    touch_signal: &'static Signal<NoopRawMutex, Option<Point>>,
+    touch_signal: &'static Signal<
+        NoopRawMutex,
+        Option<Point>,
+    >,
 ) -> ! {
-    let mut touch_driver =
-        Xpt2046::new(spi, Input::new(touch_irq, Pull::Up), xpt2046::Orientation::LandscapeFlipped);
+    let mut touch_driver = Xpt2046::new(
+        spi,
+        Input::new(touch_irq, Pull::Up),
+        xpt2046::Orientation::LandscapeFlipped,
+    );
     touch_driver.set_num_samples(16);
     touch_driver.init(&mut embassy_time::Delay).unwrap();
 
     esp_println::println!("touch task");
 
     loop {
-        touch_driver.run().expect("Running Touch driver failed");
+        touch_driver
+            .run()
+            .expect("Running Touch driver failed");
         if touch_driver.is_touched() {
             let point = touch_driver.get_touch_point();
-            touch_signal.signal(Some(Point::new(point.x + 25, 240 - point.y)));
+            touch_signal.signal(Some(Point::new(
+                point.x + 25,
+                240 - point.y,
+            )));
         } else {
             touch_signal.signal(None);
         }
@@ -112,16 +133,23 @@ struct CYDPlatform {
 impl Platform for CYDPlatform {
     fn create_window_adapter(
         &self,
-    ) -> Result<Rc<dyn slint::platform::WindowAdapter>, slint::PlatformError> {
+    ) -> Result<
+        Rc<dyn slint::platform::WindowAdapter>,
+        slint::PlatformError,
+    > {
         Ok(self.window.clone())
     }
 
     fn duration_since_start(&self) -> core::time::Duration {
-        embassy_time::Instant::from_millis(0).elapsed().into()
+        embassy_time::Instant::from_millis(0)
+            .elapsed()
+            .into()
     }
 
     //noinspection DuplicatedCode
-    fn run_event_loop(&self) -> Result<(), slint::PlatformError> {
+    fn run_event_loop(
+        &self,
+    ) -> Result<(), slint::PlatformError> {
         todo!();
     }
 }
@@ -131,13 +159,17 @@ async fn main(spawner: Spawner) {
     init_heap();
     let peripherals = Peripherals::take();
     let system = SystemControl::new(peripherals.SYSTEM);
-    let mut clocks = ClockControl::boot_defaults(system.clock_control).freeze();
+    let mut clocks =
+        ClockControl::boot_defaults(system.clock_control)
+            .freeze();
 
     let mut rtc = Rtc::new(peripherals.LPWR);
     rtc.rwdt.disable();
-    let mut timer_group0 = TimerGroup::new(peripherals.TIMG0, &clocks);
+    let mut timer_group0 =
+        TimerGroup::new(peripherals.TIMG0, &clocks);
     timer_group0.wdt.disable();
-    let mut timer_group1 = TimerGroup::new(peripherals.TIMG1, &clocks);
+    let mut timer_group1 =
+        TimerGroup::new(peripherals.TIMG1, &clocks);
     timer_group1.wdt.disable();
 
     esp_hal_embassy::init(&clocks, timer_group0.timer0);
@@ -151,21 +183,34 @@ async fn main(spawner: Spawner) {
     let touch_cs = io.pins.gpio33;
 
     // 2MHz is the MAX! DO NOT DECREASE! This is really important.
-    let mut touch_spi = Spi::new(peripherals.SPI3, 2.MHz(), SpiMode::Mode0, &mut clocks).with_pins(
+    let mut touch_spi = Spi::new(
+        peripherals.SPI3,
+        2.MHz(),
+        SpiMode::Mode0,
+        &mut clocks,
+    )
+    .with_pins(
         Some(touch_clk),
         Some(touch_mosi),
         Some(touch_miso),
         NO_PIN,
     );
 
-    static TOUCH_DELAY_STATICCELL: StaticCell<Delay> = StaticCell::new();
+    static TOUCH_DELAY_STATICCELL: StaticCell<Delay> =
+        StaticCell::new();
     let mut delay = TOUCH_DELAY_STATICCELL.init(Delay);
 
-    let touch_spi =
-        ExclusiveDevice::new(touch_spi, Output::new(touch_cs, Level::Low), delay).unwrap();
+    let touch_spi = ExclusiveDevice::new(
+        touch_spi,
+        Output::new(touch_cs, Level::Low),
+        delay,
+    )
+    .unwrap();
 
     let touch_signal = Signal::new();
-    static TOUCH_SIGNAL: StaticCell<Signal<NoopRawMutex, Option<Point>>> = StaticCell::new();
+    static TOUCH_SIGNAL: StaticCell<
+        Signal<NoopRawMutex, Option<Point>>,
+    > = StaticCell::new();
     let touch_signal = &*TOUCH_SIGNAL.init(touch_signal);
 
     // let sw_int = system.software_interrupt_control.software_interrupt2;
@@ -174,7 +219,13 @@ async fn main(spawner: Spawner) {
     // let executor = InterruptExecutor::<2>::new(sw_int);
     // let executor = EXECUTOR.init(executor);
 
-    spawner.spawn(touch_task(touch_irq, touch_spi, touch_signal)).unwrap();
+    spawner
+        .spawn(touch_task(
+            touch_irq,
+            touch_spi,
+            touch_signal,
+        ))
+        .unwrap();
 
     // executor.start(Priority::Priority1);
 
@@ -184,9 +235,16 @@ async fn main(spawner: Spawner) {
     let mosi = io.pins.gpio13;
     let cs = io.pins.gpio15;
     let dc = io.pins.gpio2;
-    let mut backlight = Output::new(io.pins.gpio21, Level::Low);
+    let mut backlight =
+        Output::new(io.pins.gpio21, Level::Low);
 
-    let mut spi = Spi::new(peripherals.SPI2, 10u32.MHz(), SpiMode::Mode0, &clocks).with_pins(
+    let mut spi = Spi::new(
+        peripherals.SPI2,
+        10u32.MHz(),
+        SpiMode::Mode0,
+        &clocks,
+    )
+    .with_pins(
         Some(sclk),
         Some(mosi),
         Some(miso),
@@ -197,16 +255,26 @@ async fn main(spawner: Spawner) {
     // let spi_bus = NoopMutex::new(RefCell::new(spi));
     // let spi_bus = DISP_SPI_BUS.init(spi_bus);
 
-    static spi_delay_staticcell: StaticCell<Delay> = StaticCell::new();
+    static spi_delay_staticcell: StaticCell<Delay> =
+        StaticCell::new();
     let mut delay = spi_delay_staticcell.init(Delay);
-    let spi = ExclusiveDevice::new(spi, Output::new(cs, Level::Low), delay).unwrap();
+    let spi = ExclusiveDevice::new(
+        spi,
+        Output::new(cs, Level::Low),
+        delay,
+    )
+    .unwrap();
 
-    let di = SPIInterface::new(spi, Output::new(dc, Level::Low));
+    let di =
+        SPIInterface::new(spi, Output::new(dc, Level::Low));
 
-    let display = Builder::new(ILI9486Rgb565, di)
-        .orientation(Orientation { rotation: Rotation::Deg90, mirrored: true })
+    let display = Builder::new(ILI9341Rgb565, di)
+        .orientation(Orientation {
+            rotation: Rotation::Deg90,
+            mirrored: true,
+        })
         .color_order(ColorOrder::Bgr)
-        .invert_colors(ColorInversion::Inverted)
+        // .invert_colors(ColorInversion::Inverted)
         .init(&mut embassy_time::Delay)
         .unwrap();
 
@@ -215,10 +283,14 @@ async fn main(spawner: Spawner) {
     backlight.set_high();
 
     let size = display.bounding_box().size;
-    let size = slint::PhysicalSize::new(size.width as u32, size.height as u32);
+    // let size = slint::PhysicalSize::new(size.width as u32, size.height as u32);
 
-    let window = MinimalSoftwareWindow::new(Default::default());
-    slint::platform::set_platform(Box::new(CYDPlatform { window: window.clone() })).unwrap();
+    let window =
+        MinimalSoftwareWindow::new(Default::default());
+    slint::platform::set_platform(Box::new(CYDPlatform {
+        window: window.clone(),
+    }))
+    .unwrap();
 
     let ui = create_slint_app();
 
@@ -238,16 +310,28 @@ async fn main(spawner: Spawner) {
             let button = PointerEventButton::Left;
             let interact = match (touch, last_touch) {
                 (Some(point), Some(_)) => {
-                    Some(WindowEvent::PointerMoved { position: point_to_logical_pos(point) })
+                    Some(WindowEvent::PointerMoved {
+                        position: point_to_logical_pos(
+                            point,
+                        ),
+                    })
                 }
-                (Some(point), None) => Some(WindowEvent::PointerPressed {
-                    position: point_to_logical_pos(point),
-                    button,
-                }),
-                (None, Some(point)) => Some(WindowEvent::PointerReleased {
-                    position: point_to_logical_pos(point),
-                    button,
-                }),
+                (Some(point), None) => {
+                    Some(WindowEvent::PointerPressed {
+                        position: point_to_logical_pos(
+                            point,
+                        ),
+                        button,
+                    })
+                }
+                (None, Some(point)) => {
+                    Some(WindowEvent::PointerReleased {
+                        position: point_to_logical_pos(
+                            point,
+                        ),
+                        button,
+                    })
+                }
                 (None, None) => None,
             };
             if let Some(event) = interact {
@@ -266,8 +350,6 @@ async fn main(spawner: Spawner) {
             renderer.render_by_line(&mut buffer_provider);
         });
 
-        let button = PointerEventButton::Left;
-
         if window.has_active_animations() {
             continue;
         }
@@ -278,7 +360,8 @@ async fn main(spawner: Spawner) {
         let draw_time = display.get_time();
         let prep_time = start_draw_time - start_time;
         let proc_time = end_time - start_draw_time;
-        let proc_time = proc_time - min(draw_time, proc_time);
+        let proc_time =
+            proc_time - min(draw_time, proc_time);
         rtc.rwdt.feed();
 
         if draw_time.as_micros() > 0 {
@@ -313,9 +396,11 @@ impl<
         E: core::fmt::Debug,
         DT: DrawTarget<Color = Rgb565, Error = E>,
         // RST: OutputPin<Error = core::convert::Infallible>,
-    > slint::platform::software_renderer::LineBufferProvider for &mut DrawBuffer<'_, DT>
+    > slint::platform::software_renderer::LineBufferProvider
+    for &mut DrawBuffer<'_, DT>
 {
-    type TargetPixel = slint::platform::software_renderer::Rgb565Pixel;
+    type TargetPixel =
+        slint::platform::software_renderer::Rgb565Pixel;
 
     fn process_line(
         &mut self,

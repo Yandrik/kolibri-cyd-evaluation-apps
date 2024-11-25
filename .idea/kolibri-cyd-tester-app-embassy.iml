@@ -5,8 +5,12 @@
       <sourceFolder url="file://$MODULE_DIR$/app/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/embedded-graphics-profiler-display/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lvgl-based/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/slint-based/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/app/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
+      <excludeFolder url="file://$MODULE_DIR$/lvgl-based/target" />
+      <excludeFolder url="file://$MODULE_DIR$/slint-based/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

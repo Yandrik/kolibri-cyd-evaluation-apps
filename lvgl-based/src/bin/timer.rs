@@ -8,14 +8,22 @@ use std::{
 
 use cstr_core::CString;
 use display_interface_spi::SPIInterface;
-use embedded_graphics_core::{draw_target::DrawTarget, prelude::Point};
+use embedded_graphics_core::{
+    draw_target::DrawTarget,
+    prelude::Point,
+};
 use embedded_graphics_profiler_display::ProfilerDisplay;
 use esp_idf_hal::spi::SpiSingleDeviceDriver;
 use esp_idf_hal::{
     delay::{self, Delay},
     gpio::*,
     peripherals::Peripherals,
-    spi::{config::DriverConfig, Dma, SpiConfig, SpiDeviceDriver},
+    spi::{
+        config::DriverConfig,
+        Dma,
+        SpiConfig,
+        SpiDeviceDriver,
+    },
     units::FromValueType, // for converting 26MHz to value
 };
 use lvgl::{
@@ -38,8 +46,13 @@ use lvgl::{
     Widget,
 };
 use mipidsi::{
-    models::ILI9486Rgb565,
-    options::{ColorInversion, ColorOrder, Orientation, Rotation},
+    models::ILI9341Rgb565,
+    options::{
+        ColorInversion,
+        ColorOrder,
+        Orientation,
+        Rotation,
+    },
     Builder,
 };
 use xpt2046::Xpt2046;
@@ -57,7 +70,9 @@ impl AppData {
         Self {
             timer_start: Instant::now(),
             timer_set_duration: Duration::from_secs(10),
-            timer_remaining_duration: Duration::from_secs(10),
+            timer_remaining_duration: Duration::from_secs(
+                10,
+            ),
             timer_running: false,
             timer_paused: false,
         }
@@ -87,7 +102,8 @@ impl AppData {
 
     fn start_timer(&mut self) {
         if !self.timer_paused {
-            self.timer_remaining_duration = self.timer_set_duration;
+            self.timer_remaining_duration =
+                self.timer_set_duration;
         }
 
         self.timer_start = Instant::now();
@@ -107,7 +123,8 @@ impl AppData {
         self.timer_start = Instant::now();
         self.timer_paused = false;
         self.timer_running = false;
-        self.timer_remaining_duration = self.timer_set_duration;
+        self.timer_remaining_duration =
+            self.timer_set_duration;
     }
 
     fn remaining(&self) -> Duration {
@@ -135,7 +152,8 @@ impl AppData {
     }
 
     fn timer_finished(&self) -> bool {
-        self.timer_running && self.remaining() == Duration::from_secs(0)
+        self.timer_running
+            && self.remaining() == Duration::from_secs(0)
     }
 }
 
@@ -144,8 +162,8 @@ fn main() -> Result<(), LvError> {
     const VER_RES: u32 = 240;
     const LINES: u32 = 20;
 
-    // It is necessary to call this function once. Otherwise some patches to the
-    // runtime implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
+    // It is necessary to call this function once. Otherwise
+    // some patches to the runtime implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
     esp_idf_svc::sys::link_patches();
 
     // Initialize lvgl
@@ -174,7 +192,9 @@ fn main() -> Result<(), LvError> {
         Some(miso), // sdi
         Some(cs),   // cs
         &DriverConfig::new().dma(Dma::Channel1(4096)),
-        &SpiConfig::new().write_only(true).baudrate(10.MHz().into()),
+        &SpiConfig::new()
+            .write_only(true)
+            .baudrate(10.MHz().into()),
     )
     .unwrap();
 
@@ -187,8 +207,9 @@ fn main() -> Result<(), LvError> {
     bklt.set_high().unwrap();
 
     // Configuration for M5Stack Core Development Kit V1.0
-    // Puts display in landscape mode with the three buttons at the bottom of screen
-    // let mut m5stack_display = Builder::ili9342c_rgb565(di)
+    // Puts display in landscape mode with the three buttons
+    // at the bottom of screen let mut m5stack_display =
+    // Builder::ili9342c_rgb565(di)
     //     .with_display_size(320, 240)
     //     .with_color_order(ColorOrder::Bgr)
     //     .with_orientation(Orientation::Portrait(false))
@@ -201,23 +222,25 @@ fn main() -> Result<(), LvError> {
     //     .with_orientation(Orientation::Portrait(false))
     //     .with_color_order(ColorOrder::Bgr)
     //     .with_invert_colors(true)
-    //     .init(&mut Delay::new_default(), None::<PinDriver<AnyOutputPin, Output>>)
+    //     .init(&mut Delay::new_default(),
+    // None::<PinDriver<AnyOutputPin, Output>>)
     //     .unwrap();
 
-    let raw_display = Builder::new(ILI9486Rgb565, di)
+    let raw_display = Builder::new(ILI9341Rgb565, di)
         .orientation(Orientation {
             rotation: Rotation::Deg90,
             mirrored: true,
         })
         .color_order(ColorOrder::Bgr)
-        .invert_colors(ColorInversion::Inverted)
+        // .invert_colors(ColorInversion::Inverted)
         .init(&mut Delay::new_default())
         .unwrap();
 
     let mut raw_display = ProfilerDisplay::new(raw_display);
 
-    // Stack size value - 20,000 for 10 lines,  40,000 for 20 lines
-    // let (touch_send, touch_recv) = channel();
+    // Stack size value - 20,000 for 10 lines,  40,000 for
+    // 20 lines let (touch_send, touch_recv) =
+    // channel();
     let touch_irq = pins.gpio36;
     let touch_mosi = pins.gpio32;
     let touch_miso = pins.gpio39;
@@ -232,7 +255,9 @@ fn main() -> Result<(), LvError> {
             Some(touch_miso),
             Some(touch_cs),
             &DriverConfig::new(),
-            &SpiConfig::new().write_only(true).baudrate(2.MHz().into()),
+            &SpiConfig::new()
+                .write_only(true)
+                .baudrate(2.MHz().into()),
         )
         .unwrap(),
         PinDriver::input(touch_irq).unwrap(),
@@ -401,15 +426,18 @@ fn main() -> Result<(), LvError> {
             let mut was_finished = false;
             let mut last_rem_time: Duration = appdata.remaining() + Duration::from_millis(10);
 
+            let mut last_time = Instant::now();
             loop {
                 let start_time = Instant::now();
                 let rem_time = appdata.remaining();
-                let val = CString::new(format!("{:02}:{:02}:{:03}",
-                                           rem_time.as_secs() / 60,
-                                           rem_time.as_secs() % 60,
-                                           rem_time.as_millis() % 1000)).unwrap();
+                if rem_time != last_rem_time {
+                    let val = CString::new(format!("{:02}:{:02}:{:03}",
+                                                   rem_time.as_secs() / 60,
+                                                   rem_time.as_secs() % 60,
+                                                   rem_time.as_millis() % 1000)).unwrap();
 
-                time.set_text(&val).unwrap();
+                    time.set_text(&val).unwrap();
+                }
                 last_rem_time = rem_time;
 
 
@@ -426,7 +454,9 @@ fn main() -> Result<(), LvError> {
                 // seconds
                 // delay::FreeRtos::delay_ms(1);
 
-                lvgl::tick_inc(Instant::now().duration_since(start_time));
+                let now_time = Instant::now();
+                lvgl::tick_inc(now_time.duration_since(last_time));
+                last_time = now_time;
 
 
                 let end_time = Instant::now();

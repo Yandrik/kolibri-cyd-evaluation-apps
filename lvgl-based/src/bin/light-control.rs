@@ -9,14 +9,22 @@ use std::{
 
 use cstr_core::CString;
 use display_interface_spi::SPIInterface;
-use embedded_graphics_core::{draw_target::DrawTarget, prelude::Point};
+use embedded_graphics_core::{
+    draw_target::DrawTarget,
+    prelude::Point,
+};
 use embedded_graphics_profiler_display::ProfilerDisplay;
 use esp_idf_hal::spi::SpiSingleDeviceDriver;
 use esp_idf_hal::{
     delay::{self, Delay},
     gpio::*,
     peripherals::Peripherals,
-    spi::{config::DriverConfig, Dma, SpiConfig, SpiDeviceDriver},
+    spi::{
+        config::DriverConfig,
+        Dma,
+        SpiConfig,
+        SpiDeviceDriver,
+    },
     units::FromValueType, // for converting 26MHz to value
 };
 use lvgl::{
@@ -42,16 +50,24 @@ use lvgl::{
     Widget,
 };
 use mipidsi::{
-    models::ILI9486Rgb565,
-    options::{ColorInversion, ColorOrder, Orientation, Rotation},
+    models::ILI9341Rgb565,
+    options::{
+        ColorInversion,
+        ColorOrder,
+        Orientation,
+        Rotation,
+    },
     Builder,
 };
 use xpt2046::Xpt2046;
 
 fn lerp_fixed(start: u8, end: u8, t: u8, max_t: u8) -> u8 {
-    let (start, end, t, max_t) = (start as u16, end as u16, t as u16, max_t as u16);
+    let (start, end, t, max_t) =
+        (start as u16, end as u16, t as u16, max_t as u16);
     let t = t.min(max_t);
-    let result = start + ((end - start.min(end)) * t + (max_t / 2)) / max_t;
+    let result = start
+        + ((end - start.min(end)) * t + (max_t / 2))
+            / max_t;
     result as u8
 }
 
@@ -65,7 +81,9 @@ struct Lamp {
 impl Lamp {
     pub fn new(name: &str) -> Self {
         Self {
-            name: heapless::String::from(heapless::String::from_str(name).unwrap()),
+            name: heapless::String::from(
+                heapless::String::from_str(name).unwrap(),
+            ),
             on: false,
             brightness: 255,
         }
@@ -97,8 +115,8 @@ fn main() -> Result<(), LvError> {
     const VER_RES: u32 = 240;
     const LINES: u32 = 20;
 
-    // It is necessary to call this function once. Otherwise some patches to the
-    // runtime implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
+    // It is necessary to call this function once. Otherwise
+    // some patches to the runtime implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
     esp_idf_svc::sys::link_patches();
 
     // Initialize lvgl
@@ -127,7 +145,9 @@ fn main() -> Result<(), LvError> {
         Some(miso), // sdi
         Some(cs),   // cs
         &DriverConfig::new().dma(Dma::Channel1(4096)),
-        &SpiConfig::new().write_only(true).baudrate(10.MHz().into()),
+        &SpiConfig::new()
+            .write_only(true)
+            .baudrate(10.MHz().into()),
     )
     .unwrap();
 
@@ -140,8 +160,9 @@ fn main() -> Result<(), LvError> {
     bklt.set_high().unwrap();
 
     // Configuration for M5Stack Core Development Kit V1.0
-    // Puts display in landscape mode with the three buttons at the bottom of screen
-    // let mut m5stack_display = Builder::ili9342c_rgb565(di)
+    // Puts display in landscape mode with the three buttons
+    // at the bottom of screen let mut m5stack_display =
+    // Builder::ili9342c_rgb565(di)
     //     .with_display_size(320, 240)
     //     .with_color_order(ColorOrder::Bgr)
     //     .with_orientation(Orientation::Portrait(false))
@@ -154,23 +175,25 @@ fn main() -> Result<(), LvError> {
     //     .with_orientation(Orientation::Portrait(false))
     //     .with_color_order(ColorOrder::Bgr)
     //     .with_invert_colors(true)
-    //     .init(&mut Delay::new_default(), None::<PinDriver<AnyOutputPin, Output>>)
+    //     .init(&mut Delay::new_default(),
+    // None::<PinDriver<AnyOutputPin, Output>>)
     //     .unwrap();
 
-    let raw_display = Builder::new(ILI9486Rgb565, di)
+    let raw_display = Builder::new(ILI9341Rgb565, di)
         .orientation(Orientation {
             rotation: Rotation::Deg90,
             mirrored: true,
         })
         .color_order(ColorOrder::Bgr)
-        .invert_colors(ColorInversion::Inverted)
+        // .invert_colors(ColorInversion::Inverted)
         .init(&mut Delay::new_default())
         .unwrap();
 
     let mut raw_display = ProfilerDisplay::new(raw_display);
 
-    // Stack size value - 20,000 for 10 lines,  40,000 for 20 lines
-    // let (touch_send, touch_recv) = channel();
+    // Stack size value - 20,000 for 10 lines,  40,000 for
+    // 20 lines let (touch_send, touch_recv) =
+    // channel();
     let touch_irq = pins.gpio36;
     let touch_mosi = pins.gpio32;
     let touch_miso = pins.gpio39;
@@ -185,7 +208,9 @@ fn main() -> Result<(), LvError> {
             Some(touch_miso),
             Some(touch_cs),
             &DriverConfig::new(),
-            &SpiConfig::new().write_only(true).baudrate(2.MHz().into()),
+            &SpiConfig::new()
+                .write_only(true)
+                .baudrate(2.MHz().into()),
         )
         .unwrap(),
         PinDriver::input(touch_irq).unwrap(),
@@ -317,7 +342,7 @@ fn main() -> Result<(), LvError> {
 
                 cont.on_event(|_btn, event| {
                     if let Event::Pressed = event {
-                        println!("lamp {:?}", lamp.name);
+                        // println!("lamp {:?}", lamp.name);
                         // page = Page::LampCtrl(lamp);
 
                         brightness_slider.set_value(lerp_fixed(0, 100, lamp.brightness, 255).into(), AnimationState::OFF);

@@ -12,7 +12,15 @@ build = "build.rs"
 # [[bin]]
 # name = "main"
 
+[features]
+starter = []
+timer = []
+light-control = []
+microwave-ui = []
+simulator = ["slint/backend-winit"]
+
 [[bin]]
+
 name = "starter"
 
 [[bin]]
@@ -59,20 +67,4 @@ embedded-hal-bus = "0.2.0"
 [build-dependencies]
 slint-build = { version = "1.8" }
 
-
-[features]
-simulator = ["slint/backend-winit"]
-# pico = [
-#     "slint/unsafe-single-threaded",
-#     "slint/libm",
-#     "cortex-m",
-#     "cortex-m-rt",
-#     "embedded-alloc",
-#     "embedded-hal",
-#     "fugit",
-#     "display-interface-spi",
-#     "embedded-graphics-core",
-#     "shared-bus",
-#     "panic-halt"
-# ]
 

@@ -10,7 +10,7 @@
 #
 
 # runner = "espflash --monitor" # Select this runner for espflash v1.x.x
-runner = "espflash flash --monitor --baud 921600" # Select this runner for espflash v2.x.x
+# runner = "espflash flash --monitor --baud 921600" # Select this runner for espflash v2.x.x
 
 # Target specific options
 [target.thumbv6m-none-eabi]
